@@ -13,9 +13,10 @@ requirements:
   build:
     - python=3.12
     - setuptools
+    - ipykernel
   run:
     - numpy>=2.0
-    - ipykernel
+    - astra-toolbox
     - pytorch
     - colorama
     - dill
