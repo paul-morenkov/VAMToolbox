@@ -15,24 +15,24 @@ requirements:
     - setuptools
     - ipykernel
   run:
-    - numpy>=2.0
     - astra-toolbox
-    - pytorch
     - colorama
     - dill
     - docutils
     - ffmpeg-python
-    - vedo
+    - imageio
     - matplotlib
     - numba
+    - numpy>=2.0
     - opencv
-    - imageio
-    - pyvista
     - pyglet
-    - scikit-image
-    - trimesh
-    - tqdm
     - pyopengl
+    - pytorch>=2.1
+    - pyvista
+    - scikit-image
+    - tqdm
+    - trimesh
+    - vedo
 
   test:
     imports:
