@@ -11,6 +11,7 @@ from scipy import interpolate, sparse
 import vamtoolbox
 
 
+
 def defaultKwargs(**default_kwargs):
     def actualDecorator(fn):
         @functools.wraps(fn)
