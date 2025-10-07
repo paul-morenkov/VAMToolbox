@@ -1,7 +1,8 @@
 import functools
 from logging import warning
+from typing import Literal
 
-import dill
+import dill  # type: ignore
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
@@ -9,7 +10,6 @@ from PIL import Image, ImageOps
 from scipy import interpolate, sparse
 
 import vamtoolbox
-
 
 
 def defaultKwargs(**default_kwargs):
@@ -24,8 +24,13 @@ def defaultKwargs(**default_kwargs):
     return actualDecorator
 
 
+type RayType = Literal["parallel", "cone", "algebraic", "ray_trace"]
+
+
 class ProjectionGeometry:
-    def __init__(self, angles, ray_type, CUDA=False, **kwargs):
+    def __init__(
+        self, angles: np.ndarray, ray_type: RayType, CUDA: bool | None = False, **kwargs
+    ):
         """
         Parameters:
         ----------
@@ -33,7 +38,7 @@ class ProjectionGeometry:
             vector of angles at which to forward/backward project
 
         ray_type : str
-            ray type of projection geometry e.g. "parallel","cone","algebraic","ray_trace"
+            ray type of projection geometry e.g. "parallel", "cone", "algebraic", "ray_trace"
 
         CUDA : boolean, optional
             activates CUDA-GPU accelerated projectors
@@ -192,9 +197,9 @@ class Volume:
     def __init__(
         self,
         array: np.ndarray,
-        proj_geo: ProjectionGeometry = None,
+        proj_geo: ProjectionGeometry | None = None,
         options=None,
-        **kwargs
+        **kwargs,
     ):
 
         self.array = array
@@ -574,7 +579,7 @@ class TargetGeometry(Volume):
         savepath=None,
         dpi="figure",
         transparent=False,
-        **kwargs
+        **kwargs,
     ):
         kwargs["cmap"] = "gray" if "cmap" not in kwargs else kwargs["cmap"]
         kwargs["interpolation"] = (
