@@ -1,27 +1,9 @@
-import numpy as np
-from scipy.fft import fft2
+from typing import Literal
+
 import matplotlib.pyplot as plt
-
-try:
-    import scipy.fft
-    from scipy.fft import next_fast_len
-
-    fftmodule = scipy.fft
-except ImportError:
-    import numpy.fft
-
-    fftmodule = numpy.fft
-    from scipy.fftpack import next_fast_len
-
-if fftmodule is np.fft:
-    # fallback from scipy.fft to scipy.fftpack instead of numpy.fft
-    # (fftpack preserves single precision while numpy.fft does not)
-    from scipy.fftpack import fft, ifft
-else:
-    fft = fftmodule.fft
-    ifft = fftmodule.ifft
-    fft2 = fftmodule.fft2
-    ifft2 = fftmodule.ifft2
+import numpy as np
+import scipy
+from scipy.fft import fft, fft2, ifft, ifft2, next_fast_len
 
 
 def sigmoid(x, g):
@@ -104,25 +86,25 @@ def filterTargetOSMO(x: np.ndarray, filter_name: str):
     elif filter_name == "hamming":
         hamming_window = np.abs(np.hamming(n_x))
         hamming_window_2D = np.sqrt(np.outer(hamming_window, hamming_window))
-        # hamming_ = fftmodule.fftshift(fft2(hamming_window_2D,axes=(0,1)),axes=(0,1))
+        # hamming_ = scipy.fft.fftshift(fft2(hamming_window_2D,axes=(0,1)),axes=(0,1))
         fourier_filter *= np.abs(hamming_window_2D)
     elif filter_name == "hanning":
         hanning_window = np.abs(np.hanning(n_x))
         hanning_window_2D = np.sqrt(np.outer(hanning_window, hanning_window))
-        # hanning_ = fftmodule.fftshift(fft2(hanning_window_2D,axes=(0,1)),axes=(0,1))
+        # hanning_ = scipy.fft.fftshift(fft2(hanning_window_2D,axes=(0,1)),axes=(0,1))
         fourier_filter *= np.abs(hanning_window_2D)
     elif filter_name is None:
         fourier_filter[:] = 1
 
-    x_FT = fftmodule.fftshift(fft2(x, axes=(0, 1)), axes=(0, 1))
+    x_FT = scipy.fft.fftshift(fft2(x, axes=(0, 1)), axes=(0, 1))
     if x.ndim == 2:
         x_filtered = ifft2(
-            fftmodule.ifftshift(np.multiply(x_FT, fourier_filter), axes=(0, 1)),
+            scipy.fft.ifftshift(np.multiply(x_FT, fourier_filter), axes=(0, 1)),
             axes=(0, 1),
         )
     else:
         x_filtered = ifft2(
-            fftmodule.ifftshift(
+            scipy.fft.ifftshift(
                 np.multiply(x_FT, fourier_filter[:, :, np.newaxis]), axes=(0, 1)
             ),
             axes=(0, 1),
@@ -159,10 +141,10 @@ def filterTargetBCLP(real_space_array: np.ndarray, filter_name: str):
     ), "The first two dimensions of the real space array must have the same number of elements."
 
     f_x, f_y = np.meshgrid(
-        fftmodule.fftfreq(n_x), fftmodule.fftfreq(n_y), indexing="ij"
+        scipy.fft.fftfreq(n_x), scipy.fft.fftfreq(n_y), indexing="ij"
     )
     f_radial = np.sqrt(f_x**2 + f_y**2)
-    fourier_filter = fftmodule.fftshift(f_radial)  # center-aligned after this line
+    fourier_filter = scipy.fft.fftshift(f_radial)  # center-aligned after this line
 
     # Modify in center-algined view
     if filter_name == "ram-lak":
@@ -179,32 +161,32 @@ def filterTargetBCLP(real_space_array: np.ndarray, filter_name: str):
     elif filter_name == "hamming":
         hamming_window = np.abs(np.hamming(n_x))
         hamming_window_2D = np.sqrt(np.outer(hamming_window, hamming_window))
-        # hamming_ = fftmodule.fftshift(fft2(hamming_window_2D,axes=(0,1)),axes=(0,1))
+        # hamming_ = scipy.fft.fftshift(fft2(hamming_window_2D,axes=(0,1)),axes=(0,1))
         fourier_filter *= np.abs(hamming_window_2D)
     elif filter_name == "hanning":
         hanning_window = np.abs(np.hanning(n_x))
         hanning_window_2D = np.sqrt(np.outer(hanning_window, hanning_window))
-        # hanning_ = fftmodule.fftshift(fft2(hanning_window_2D,axes=(0,1)),axes=(0,1))
+        # hanning_ = scipy.fft.fftshift(fft2(hanning_window_2D,axes=(0,1)),axes=(0,1))
         fourier_filter *= np.abs(hanning_window_2D)
     elif filter_name is None:
         fourier_filter[:] = 1
 
     # TODO:To be simplified
-    real_space_array_FT = fftmodule.fftshift(
+    real_space_array_FT = scipy.fft.fftshift(
         fft2(real_space_array, axes=(0, 1)), axes=(0, 1)
     )
     if (
         real_space_array.ndim == 2
     ):  # This case is being depractated but temporarily retained for backward compatibility
         real_space_array_filtered = ifft2(
-            fftmodule.ifftshift(
+            scipy.fft.ifftshift(
                 np.multiply(real_space_array_FT, fourier_filter), axes=(0, 1)
             ),
             axes=(0, 1),
         )
     else:
         real_space_array_filtered = ifft2(
-            fftmodule.ifftshift(
+            scipy.fft.ifftshift(
                 np.multiply(real_space_array_FT, fourier_filter[:, :, np.newaxis]),
                 axes=(0, 1),
             ),
@@ -246,7 +228,7 @@ def filterTarget(real_space_array: np.ndarray, filter_name: str):
             (pad_before, pad_after),
         )  # ndim = 2 case is retained for backward compatibility
     else:
-        pad_width = (
+        pad_width = (  # type: ignore
             (pad_before, pad_after),
             (pad_before, pad_after),
             (0, 0),
@@ -259,7 +241,7 @@ def filterTarget(real_space_array: np.ndarray, filter_name: str):
     fourier_filter_1D = np.squeeze(
         _get_fourier_filter(n_x_padded, filter_name)
     )  # Get 1D filter
-    fourier_filter_1D_freq = fftmodule.fftfreq(n_x_padded)
+    fourier_filter_1D_freq = scipy.fft.fftfreq(n_x_padded)
 
     fourier_filter_1D_sorted = fourier_filter_1D[
         fourier_filter_1D_freq.argsort()
@@ -268,7 +250,7 @@ def filterTarget(real_space_array: np.ndarray, filter_name: str):
 
     # Frequency in 2D
     f_x, f_y = np.meshgrid(
-        fftmodule.fftfreq(n_x_padded), fftmodule.fftfreq(n_x_padded), indexing="ij"
+        scipy.fft.fftfreq(n_x_padded), scipy.fft.fftfreq(n_x_padded), indexing="ij"
     )
     f_radial = np.sqrt(f_x**2 + f_y**2)
     fourier_filter_2D = np.interp(
@@ -306,8 +288,18 @@ https://github.com/scikit-image/scikit-image/blob/master/skimage/transform/radon
 
 """
 
+type FilterType = Literal[
+    "ram-lak",
+    "shepp-logan",
+    "cosine",
+    "hamming",
+    "hanning",
+    "ram-lak_freq",
+    "ram-lak_scikit",
+]
 
-def filterSinogram(sinogram: np.ndarray, filter_name: str):
+
+def filterSinogram(sinogram: np.ndarray, filter_name: FilterType | None):
     """
     Filters a set of sinogram for a 2D or 3D target
 
@@ -330,20 +322,16 @@ def filterSinogram(sinogram: np.ndarray, filter_name: str):
         "hanning",
         "ram-lak_freq",
         "ram-lak_scikit",
-        "none",
         None,
     )
-    if filter_name.lower() not in filter_types:
-        raise ValueError("Unknown filter: %s" % filter_name)
-
     if filter_name is None or filter_name.lower() == "none":
         return sinogram
 
+    if filter_name.lower() not in filter_types:
+        raise ValueError("Unknown filter: %s" % filter_name)
+
     if sinogram.ndim == 2:
-        (
-            pX,
-            pY,
-        ) = sinogram.shape
+        pX, pY = sinogram.shape
         sinogram_filt = np.zeros([pX, pY], dtype=float)
 
         # Resize image to next power of two (but no less than 64) for
@@ -411,7 +399,7 @@ def _get_fourier_filter(size: int, filter_name: str):
             np.arange(size / 2 - 1, 0, -2, dtype=int),
         )
     )
-    # n = fftmodule.fftfreq(size)[1::2]*size #equivalent way to write the odd spatial coordinate (this version is signed)
+    # n = scipy.fft.fftfreq(size)[1::2]*size #equivalent way to write the odd spatial coordinate (this version is signed)
     f = np.zeros(size)
     f[0] = 0.25
     f[1::2] = -1 / (np.pi * n) ** 2
@@ -424,27 +412,27 @@ def _get_fourier_filter(size: int, filter_name: str):
         pass
     elif filter_name == "shepp-logan":
         # Start from first element to avoid divide by zero
-        omega = np.pi * fftmodule.fftfreq(size)[1:]
+        omega = np.pi * scipy.fft.fftfreq(size)[1:]
         fourier_filter[1:] *= np.sin(omega) / omega
     elif filter_name == "cosine":
         freq = np.linspace(0, np.pi, size, endpoint=False)
-        cosine_filter = fftmodule.fftshift(np.sin(freq))
+        cosine_filter = scipy.fft.fftshift(np.sin(freq))
         fourier_filter *= cosine_filter
     elif filter_name == "hamming":
-        fourier_filter *= fftmodule.fftshift(np.hamming(size))
+        fourier_filter *= scipy.fft.fftshift(np.hamming(size))
     elif filter_name == "hanning":
-        fourier_filter *= fftmodule.fftshift(np.hanning(size))
+        fourier_filter *= scipy.fft.fftshift(np.hanning(size))
     elif filter_name == "ram-lak_freq":
         fourier_filter /= (
             np.pi / 4
         ) ** 2  # fudge factor 1/(pi/4)^2 is needed on top of the original filter to reconstruct values close to original. So far this yields the best performance.
-        # fourier_filter = np.abs(fftmodule.fftfreq(size)*4) #Build filter from ground up. Somehow we still need a factor of 4 to reconstruct original values. So far this yields the second best performance.
+        # fourier_filter = np.abs(scipy.fft.fftfreq(size)*4) #Build filter from ground up. Somehow we still need a factor of 4 to reconstruct original values. So far this yields the second best performance.
     elif filter_name == "ram-lak_scikit":
         fourier_filter *= (
             np.pi / 2
         )  # This include the final multiplier the scikit-image iradon has. One potential source of this factor is the definition of DFT matrix in FFT.
         # Ref: https://github.com/scikit-image/scikit-image/blob/main/skimage/transform/radon_transform.py
-    elif filter_name is None or filter_name.lower() is "none":
+    elif filter_name is None or filter_name.lower() == "none":
         fourier_filter[:] = 1
 
     return fourier_filter[:, np.newaxis]
@@ -481,7 +469,7 @@ def _get_fourier_filter(size: int, filter_name: str):
 
 
 def histogramEqualization(
-    x: np.ndarray, bit_depth: int, output_dtype: np.dtype = float
+    x: np.ndarray, bit_depth: int, output_dtype: np.typing.DTypeLike = float
 ):
     max_x = np.amax(x)
     min01 = np.percentile(x, 1)
@@ -505,7 +493,10 @@ def histogramEqualization(
 
 
 def discretize(
-    x: np.ndarray, bit_depth: int, range: list, output_dtype: np.dtype = float
+    x: np.ndarray,
+    bit_depth: int,
+    range: list,
+    output_dtype: np.typing.DTypeLike = float,
 ):
     """
     Digitizes a variable to requested bit depth and output data type
