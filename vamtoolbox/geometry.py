@@ -198,13 +198,12 @@ class Volume:
         self,
         array: np.ndarray,
         proj_geo: ProjectionGeometry | None = None,
-        options=None,
         **kwargs,
     ):
 
         self.array = array
         self.proj_geo = proj_geo
-        self.file_extension = (
+        self.file_extension: str | None = (
             None if "file_extension" not in kwargs else kwargs["file_extension"]
         )
         self.vol_type = None if "vol_type" not in kwargs else kwargs["vol_type"]
@@ -267,7 +266,10 @@ class Volume:
 
     def save(self, name: str):
         """Save geometry object"""
-        file = open(name + self.file_extension, "wb")
+        if self.file_extension:
+            name = name + self.file_extension
+
+        file = open(name, "wb")
         dill.dump(self, file)
         file.close()
 

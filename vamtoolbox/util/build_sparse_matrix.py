@@ -1,14 +1,20 @@
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 # This software may be used and distributed according to the GNU GPLv3 license.
 
+import time
+
 import numpy as np
 from scipy import sparse
+
 import vamtoolbox
-import time
 
 
 def buildMatrix(
-    target_geo, proj_geo, sparse_format="csr", save_path=None, block_insert=False
+    target_geo,
+    proj_geo,
+    sparse_format="csr",
+    save_path: str | None = None,
+    block_insert: bool | None = False,
 ):
     """
     save_path : str, optional
@@ -43,6 +49,7 @@ def buildMatrix(
 
     # Measure shift-variant impulse response
     # store impulse response as row of sparse propagation (projection) matrix
+    # TODO: implement block insertion
     if block_insert:
         raise Exception("Block insertsion is not yet implemented.")
     else:
@@ -66,7 +73,7 @@ def buildMatrix(
     if save_path is not None:
         start_time = time.perf_counter()
         print(f"Saving to f{save_path}")
-        sparse.save_npz(save_path, P)
+        sparse.save_npz(save_path, P)  # type: ignore
         print(f"Saving done in {time.perf_counter() - start_time}s.")
 
     return P

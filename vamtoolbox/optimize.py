@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import vamtoolbox
 
 
+# TODO: make options a dataclass
 class Options:
 
     __default_FBP = {"offset": False}
@@ -152,15 +153,14 @@ class Options:
                 # This avoids putting the ResponseModel object inside the class definition of Options (and hence avoid import problems and unnesscary init of default response model)
                 self.response_model = vamtoolbox.response.ResponseModel()
             else:
-                self.response_model = self.__default_BCLP[
-                    "response_model"
-                ]  # If a response model is given, use the provided one instead.
+                # If a response model is given, use the provided one instead.
+                self.response_model = self.__default_BCLP["response_model"]  # type: ignore
 
             self.eps = self.__default_BCLP["eps"]
             self.weight = self.__default_BCLP["weight"]
-            self.p = self.__default_BCLP["p"]
-            self.q = self.__default_BCLP["q"]
-            self.learning_rate = self.__default_BCLP["learning_rate"]
+            self.p = self.__default_BCLP["p"]  # type: ignore
+            self.q = self.__default_BCLP["q"]  # type: ignore
+            self.learning_rate = self.__default_BCLP["learning_rate"]  # type: ignore
             self.optim_alg = self.__default_BCLP["optim_alg"]
             self.g0 = self.__default_BCLP["g0"]
             self.test_alternate_handling = self.__dict__.get(

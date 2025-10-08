@@ -1,12 +1,13 @@
 from scipy import io
+
 import vamtoolbox
 
 
 def saveMatData(
     filepath: str,
-    target_geo: vamtoolbox.geometry.TargetGeometry = None,
-    sinogram: vamtoolbox.geometry.Sinogram = None,
-    reconstruction: vamtoolbox.geometry.Reconstruction = None,
+    target_geo: vamtoolbox.geometry.TargetGeometry | None = None,
+    sinogram: vamtoolbox.geometry.Sinogram | None = None,
+    reconstruction: vamtoolbox.geometry.Reconstruction | None = None,
 ):
     """
     Saves VAM toolbox (Python) objects to Matlab formats

@@ -1,16 +1,14 @@
-from matplotlib import axes
-import numpy as np
-import matplotlib.pyplot as plt
+import time
+
 import matplotlib
 import matplotlib.animation as anim
-from matplotlib import colors
-from matplotlib import cm
+import matplotlib.pyplot as plt
+import numpy as np
+import vedo  # type: ignore
+from matplotlib import axes, cm, colors
 from scipy.ndimage import rotate
-import time
-import vedo
 
 import vamtoolbox
-
 
 plt.rcParams["font.family"] = "sans-serif"
 plt.rcParams["font.sans-serif"] = ["Arial"]

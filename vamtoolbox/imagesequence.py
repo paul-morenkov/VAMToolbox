@@ -1,17 +1,18 @@
-from ctypes import ArgumentError
-import numpy as np
-import dill
-import cv2
-from scipy import ndimage
-from PIL import Image
 import os
+from ctypes import ArgumentError
+
+import cv2
+import dill  # type: ignore
 import matplotlib.pyplot as plt
+import numpy as np
+from PIL import Image
+from scipy import ndimage
 
 import vamtoolbox
 
 
 class ImageConfig:
-    def __init__(self, image_dims, **kwargs):
+    def __init__(self, image_dims: tuple[int, int], **kwargs):
         """
         Parameters
         ----------
@@ -197,7 +198,7 @@ class ImageSeq:
         rot_vel: float,
         num_loops: float = 1,
         mode: str = "conventional",
-        angle_increment_per_image: float = None,
+        angle_increment_per_image: float = 0,
         preview: bool = False,
     ):
         """
@@ -253,7 +254,7 @@ class ImageSeq:
         image_time = angle_increment_per_image / rot_vel
         fps = 1 / image_time
 
-        codec = cv2.VideoWriter_fourcc(*"avc1")
+        codec = cv2.VideoWriter_fourcc(*"avc1")  # type: ignore
         video_out = cv2.VideoWriter(
             save_path,
             codec,

@@ -5,6 +5,11 @@ import numpy as np
 from vamtoolbox import geometry
 
 
+class CALopticalparams:
+    def __init__(self, *args, **kwargs):
+        raise NotImplementedError
+
+
 class Projector(Protocol):
     """Protocol for projector classes returned by `projectorconstructor`."""
 
