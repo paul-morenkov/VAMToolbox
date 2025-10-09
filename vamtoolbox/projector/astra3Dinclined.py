@@ -1,7 +1,4 @@
-try:
-    import astra
-except:
-    ImportError("Astra toolbox is either not installed or installed incorrectly.")
+import astra
 import numpy as np
 from skimage.util import dtype
 

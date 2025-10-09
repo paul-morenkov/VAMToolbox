@@ -1,12 +1,6 @@
-try:
-    import astra
-
-    astra_available = True
-except:
-    ImportError("Astra toolbox is either not installed or installed incorrectly.")
-    astra_available = False
 from functools import partial
 
+import astra  # type: ignore
 import matplotlib.pyplot as plt
 import numpy as np
 from skimage.transform._warps import warp

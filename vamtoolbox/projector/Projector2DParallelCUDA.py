@@ -1,14 +1,12 @@
-try:
-    import astra
-except:
-    ImportError("Astra toolbox is either not installed or installed incorrectly.")
+import astra  # type: ignore
 
 try:
-    import tigre
+    import tigre  # type: ignore
 except:
     ImportError("Tigre toolbox is either not installed or installed incorrectly.")
 
 import numpy as np
+
 import vamtoolbox
 
 

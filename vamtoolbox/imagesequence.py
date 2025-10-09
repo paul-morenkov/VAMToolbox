@@ -9,6 +9,7 @@ from PIL import Image
 from scipy import ndimage
 
 import vamtoolbox
+from vamtoolbox.geometry import Sinogram
 
 
 class ImageConfig:
@@ -85,7 +86,7 @@ class ImageConfig:
 
 
 class ImageSeq:
-    def __init__(self, image_config, sinogram):
+    def __init__(self, image_config: ImageConfig, sinogram: np.ndarray | Sinogram):
         """
         Parameters
         ----------
@@ -103,7 +104,7 @@ class ImageSeq:
         """
         if isinstance(sinogram, np.ndarray):
             pass
-        elif isinstance(sinogram, vamtoolbox.geometry.Sinogram):
+        elif isinstance(sinogram, Sinogram):
             sinogram = sinogram.array
         else:
             raise ArgumentError("sinogram not specified.")
@@ -138,6 +139,7 @@ class ImageSeq:
                 mod_sinogram, self.image_config.intensity_scale
             )
 
+        dtype: np.typing.DTypeLike
         if self.image_config.bit_depth <= 8:
             dtype = np.uint8
         elif self.image_config.bit_depth > 8 and self.image_config.bit_depth <= 16:
@@ -167,8 +169,9 @@ class ImageSeq:
                 images.append(image)
 
             else:
+                # FIXME: v_offset was missing here
                 image = _insertImage(
-                    mod_sinogram[:, j, :].T, image_out, self.image_config
+                    mod_sinogram[:, j, :].T, image_out, self.image_config, 0
                 )
                 images.append(image)
 
@@ -198,7 +201,7 @@ class ImageSeq:
         rot_vel: float,
         num_loops: float = 1,
         mode: str = "conventional",
-        angle_increment_per_image: float = 0,
+        angle_increment_per_image: float | None = None,
         preview: bool = False,
     ):
         """
@@ -245,7 +248,7 @@ class ImageSeq:
             assert (
                 angle_increment_per_image is not None
             ), "angle_increment_per_image must be None in conventional mode because it is derived from number of images in sinogram"
-            num_total_images = len(self.images) * num_loops
+            num_total_images = int(len(self.images) * num_loops)
         else:
             raise Exception(
                 'mode argument is not valid. Either "conventional" or "prescribed"'
@@ -260,6 +263,7 @@ class ImageSeq:
             codec,
             fps,
             (int(self.image_config.N_u), int(self.image_config.N_v)),
+            isColor=False,  # FIXME: This wasn't here before
         )
 
         k = 0
@@ -300,7 +304,13 @@ def loadImageSeq(file_name: str):
     return A
 
 
-def _insertImage(image, image_out, image_config, v_offset, **kwargs):
+def _insertImage(
+    image: np.ndarray,
+    image_out: np.ndarray,
+    image_config: ImageConfig,
+    v_offset,
+    **kwargs,
+):
 
     N_u = image_config.N_u
     N_v = image_config.N_v
@@ -329,7 +339,9 @@ def _insertImage(image, image_out, image_config, v_offset, **kwargs):
     return image_out
 
 
-def _arrayInsertImage(image, image_out, image_config):
+def _arrayInsertImage(
+    image: np.ndarray, image_out: np.ndarray, image_config: ImageConfig
+):
 
     for k in range(image_config.array_num):
         if image_config.array_num % 2 == 0:
