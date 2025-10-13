@@ -1,11 +1,13 @@
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 # This software may be used and distributed according to the GNU GPLv3 license.
 
-import numpy as np
-import matplotlib.pyplot as plt
-import time
 import logging
+import time
+
+import matplotlib.pyplot as plt
+import numpy as np
 import torch
+from torch import Tensor
 
 
 class MediumModel:  # Abstract class. Superclass of IndexModel and AttenuationModel
@@ -67,22 +69,18 @@ class MediumModel:  # Abstract class. Superclass of IndexModel and AttenuationMo
         self.position_normalization_factor = (
             2.0 / self.grid_span
         )  # normalize physical location by 3D volume half span, such that values are between [-1, +1]
-        if torch.isinf(
-            self.position_normalization_factor[2]
-        ):  # In 2D case, the z span is 0. The above line evaluate as 2.0/0 which yields inf
-            self.position_normalization_factor[2] = (
-                0.0  # If inf, clamp the z position down back to 0
-            )
 
-        self.presampled_scalar_field_3D = (
-            None  # Define this attribute in MediumModel. To be populated in subclasses.
-        )
-        self.presampled_vector_field_4D = (
-            None  # Define this attribute in MediumModel. To be populated in subclasses.
-        )
-        self.interpolation_padding_mode = (
-            "border"  # Default extrapolation settings. Can be overriden in subclass.
-        )
+        # In 2D case, the z span is 0. The above line evaluate as 2.0/0 which yields inf
+        if torch.isinf(self.position_normalization_factor[2]):
+            # If inf, clamp the z position down back to 0
+            self.position_normalization_factor[2] = 0.0
+
+        # Define this attribute in MediumModel. To be populated in subclasses.
+        self.presampled_scalar_field_3D: Tensor | None = None
+        # Define this attribute in MediumModel. To be populated in subclasses.
+        self.presampled_vector_field_4D: Tensor | None = None
+        # Default extrapolation settings. Can be overriden in subclass.
+        self.interpolation_padding_mode = "border"
 
     # =================================Interpolation functions==========================================================================
     @torch.inference_mode()
@@ -161,7 +159,7 @@ class MediumModel:  # Abstract class. Superclass of IndexModel and AttenuationMo
         )
 
     @torch.inference_mode()
-    def _scalar_field_interp(self, x: torch.Tensor):
+    def _scalar_field_interp(self, x: Tensor):
         """
         Obtain scalar field value (e.g. refractive index, attenuation coefficient) via interpolating on provided or pre-sampled data points
         """
@@ -187,7 +185,7 @@ class MediumModel:  # Abstract class. Superclass of IndexModel and AttenuationMo
         ]  # scalar_val originally has shape [N, C, D_out, H_out, W_out], where W_out = number of samples
 
     @torch.inference_mode()
-    def _vector_field_interp(self, x: torch.Tensor):
+    def _vector_field_interp(self, x: Tensor):
         """
         Obtain vector field value (e.g. gradient of refractive index) via interpolating on provided or pre-sampled data points
         """
@@ -402,9 +400,8 @@ class IndexModel(MediumModel):
             # function alias
             self.n = self._scalar_field_interp
             self.grad_n = self._vector_field_interp
-            self.interpolation_padding_mode = self.params[
-                "interpolation_padding_mode"
-            ]  # This setting is used in _scalar_field_interp and _vector_field_interp.
+            # This setting is used in _scalar_field_interp and _vector_field_interp.
+            self.interpolation_padding_mode = self.params["interpolation_padding_mode"]  # type: ignore
             self.presampled_x = self.getPositionVectorsAtGridPoints()
 
             # build or import interpolant dataset
@@ -414,12 +411,12 @@ class IndexModel(MediumModel):
                     self.presampled_x
                 ).reshape(self.xg.shape)
                 grad_n_shape = list(self.xg.shape)
-                grad_n_shape.append(
-                    3
-                )  # in-place modification. (This function call return None.) Gradient has additional dimension of 3 at each sampling position
+                # in-place modification. (This function call return None.) Gradient has additional dimension of 3 at each sampling position
+                grad_n_shape.append(3)
+                # Save as a 4D tensor
                 self.presampled_vector_field_4D = torch.reshape(
                     self._grad_n_homo(self.presampled_x), tuple(grad_n_shape)
-                )  # Save as a 4D tensor
+                )
 
             elif self.form == "luneburg_lens":
                 # build interpolant arrays
@@ -463,10 +460,9 @@ class IndexModel(MediumModel):
                 )  # Save as a 4D tensor
 
             elif self.form == "freeform":  # Directly import data instead of generating.
-                self.presampled_scalar_field_3D = self.params.get(
-                    "n_x", None
-                )  # Input data points are designated with sample subscript
-                self.presampled_vector_field_4D = self.params.get("grad_n_x", None)
+                # Input data points are designated with sample subscript
+                self.presampled_scalar_field_3D = self.params.get("n_x", None)  # type: ignore
+                self.presampled_vector_field_4D = self.params.get("grad_n_x", None)  # type: ignore
 
             else:
                 raise Exception("Other interpolation functions are not supported yet.")
@@ -478,23 +474,22 @@ class IndexModel(MediumModel):
 
     # =================================Analytic: Homogeneous medium================================================
     @torch.inference_mode()
-    def _n_homo(self, x: torch.Tensor):
+    def _n_homo(self, x: Tensor) -> Tensor:
         # return self.params['n_sur']*torch.ones(x.shape[0], device=x.device) #automatically create on same device
-        return self.params["n_sur"] * torch.ones_like(
-            x[:, 0]
-        )  # automatically create on same device
+        # automatically create on same device
+        return self.params["n_sur"] * torch.ones_like(x[:, 0])  # type: ignore
 
     @torch.inference_mode()
-    def _grad_n_homo(self, x: torch.Tensor):
+    def _grad_n_homo(self, x: Tensor) -> Tensor:
         return torch.zeros_like(x)
 
     # =================================Analytic: Luneburg lens=====================================================
     @torch.inference_mode()
-    def _n_lune(self, x: torch.Tensor = None, r_known: torch.Tensor = None):
+    def _n_lune(self, x: Tensor | None = None, r_known: Tensor | None = None):
         """
         Parameters:
 
-        x : torch.Tensor, query position vector size(n_query_pts, 3)
+        x : Tensor, query position vector size(n_query_pts, 3)
 
         r_known :
 
@@ -502,55 +497,49 @@ class IndexModel(MediumModel):
         With p = 2, the center of the lens has index sqrt(2) times that of surroundings.
         Expression of n can be found in "Path Tracing Estimators for Refractive Radiative Transfer, Pediredla et. al., 2020, page 10"
         """
-        if (x is None) and (r_known is None):
-            raise Exception("Either x or r must be provided.")
-        elif r_known is None:
-            r = torch.sqrt(
-                x[:, 0] ** 2 + x[:, 1] ** 2 + x[:, 2] ** 2
-            )  # radial position, r of vector x, 1D tensor, numel = x.size[0]
+        if r_known is None:
+            if x is None:
+                raise Exception("Either x or r must be provided.")
+            # radial position, r of vector x, 1D tensor, numel = x.size[0]
+            r = torch.sqrt(x[:, 0] ** 2 + x[:, 1] ** 2 + x[:, 2] ** 2)
         else:
             r = r_known
 
         n = torch.ones_like(r)  # 1D tensor, numel = x.size[0]
 
         # Inside the lens
-        n[r < self.params["R_physical"]] = self.params["n_sur"] * (
-            2
-            - (r[r < self.params["R_physical"]] / self.params["R_physical"])
-            ** self.params["p"]
-        ) ** (1 / self.params["p"])
+        r_physical: float = self.params["R_physical"]  # type: ignore
+        p: float = self.params["p"]  # type: ignore
+        n_sur: float = self.params["n_sur"]  # type: ignore
+        n[r < r_physical] = n_sur * (2 - (r[r < r_physical] / r_physical) ** p) ** (1 / p) # fmt: skip
+
         # Outside or at the boundary of the lens.
-        if (
-            self.params["n_sur"] != 1.0
-        ):  # if n_sur is just 1, the query points outside lens is already populated with 1 so no operation needed
-            n[r >= self.params["R_physical"]] = self.params["n_sur"]
+        # if n_sur is just 1, the query points outside lens is already populated with 1 so no operation needed
+        if self.params["n_sur"] != 1.0:
+            n[r >= r_physical] = n_sur
 
         return n
 
     @torch.inference_mode()
-    def _grad_n_lune(self, x: torch.Tensor):
-        r = torch.sqrt(
-            x[:, 0] ** 2 + x[:, 1] ** 2 + x[:, 2] ** 2
-        )  # radial position, r of vector x
+    def _grad_n_lune(self, x: Tensor) -> Tensor:
+        # radial position, r of vector x
+        r = torch.sqrt(x[:, 0] ** 2 + x[:, 1] ** 2 + x[:, 2] ** 2)
 
         n = self._n_lune(r_known=r)
 
         grad_n = torch.zeros_like(x)
+        n_sur: float = self.params["n_sur"]  # type: ignore
+        r_physical: float = self.params["R_physical"]  # type: ignore
+        p: float = self.params["p"]  # type: ignore
 
-        n_0_over_r_to_P = (
-            self.params["n_sur"] / self.params["R_physical"]
-        ) ** self.params[
-            "p"
-        ]  # compute the constant multiplier together first for performance
-        idx_r_in_lens = r < self.params["R_physical"]
+        # compute the constant multiplier together first for performance
+        n_0_over_r_to_P = (n_sur / r_physical) ** p
+        idx_r_in_lens = r < r_physical
         # Inside the lens. The following two lines are equivalent. The middle two tensors are 1-D so a new axis has to be inserted for broadcasting. None == np.newaxis in torch and numpy.
         # grad_n[idx_r_in_lens, :] = - n_0_over_r_to_P * torch.unsqueeze((n[idx_r_in_lens]**(1 - self.params['p'])) * (r[idx_r_in_lens]**(self.params['p']-2)), dim = 1) * x[idx_r_in_lens,:]
         grad_n[idx_r_in_lens, :] = (
             -n_0_over_r_to_P
-            * (
-                (n[idx_r_in_lens] ** (1 - self.params["p"]))
-                * (r[idx_r_in_lens] ** (self.params["p"] - 2))
-            )[:, None]
+            * ((n[idx_r_in_lens] ** (1 - p)) * (r[idx_r_in_lens] ** (p - 2)))[:, None]
             * x[idx_r_in_lens, :]
         )
 
@@ -561,20 +550,20 @@ class IndexModel(MediumModel):
 
     # =================================Analytic: Maxwell lens============================================================
     @torch.inference_mode()
-    def _n_maxwell(self):
+    def _n_maxwell(self, x: Tensor) -> Tensor:
         raise Exception("To be implemented.")
 
     @torch.inference_mode()
-    def _grad_n_maxwell(self):
+    def _grad_n_maxwell(self, x: Tensor) -> Tensor:
         raise Exception("To be implemented.")
 
     # =================================Analytic: Eaton lens============================================================
     @torch.inference_mode()
-    def _n_eaton(self):
+    def _n_eaton(self, x: Tensor) -> Tensor:
         raise Exception("To be implemented.")
 
     @torch.inference_mode()
-    def _grad_n_eaton(self):
+    def _grad_n_eaton(self, x: Tensor) -> Tensor:
         raise Exception("To be implemented.")
 
     # =================================Utilities==========================================================================
@@ -871,9 +860,8 @@ class AttenuationModel(MediumModel):
 
             # function alias
             self.alpha = self._scalar_field_interp
-            self.interpolation_padding_mode = self.params[
-                "interpolation_padding_mode"
-            ]  # This setting is used in _scalar_field_interp and _vector_field_interp.
+            # This setting is used in _scalar_field_interp and _vector_field_interp.
+            self.interpolation_padding_mode = self.params["interpolation_padding_mode"]  # type: ignore
             self.presampled_x = self.getPositionVectorsAtGridPoints()
 
             # build or import interpolant dataset
@@ -892,9 +880,8 @@ class AttenuationModel(MediumModel):
                 )  # Save as a 3D tensor
 
             elif self.form == "freeform":  # Directly import data instead of generating.
-                self.presampled_scalar_field_3D = self.params.get(
-                    "alpha_x", None
-                )  # Input data points are designated with sample subscript
+                # Input data points are designated with sample subscript
+                self.presampled_scalar_field_3D = self.params.get("alpha_x", None)  # type: ignore
 
             else:
                 raise Exception("Other interpolation functions are not supported yet.")
@@ -905,28 +892,26 @@ class AttenuationModel(MediumModel):
 
     # =================================Analytic: Homogeneous cylinder================================================
     @torch.inference_mode()
-    def _alpha_homo_cylinder(self, x: torch.Tensor):
+    def _alpha_homo_cylinder(self, x: Tensor):
         """Constant absorption coefficient in a cylinder centered at origin. Radius determined by the class initialization variable R."""
         r = torch.linalg.norm(
             x[:, 0:2], dim=1
         )  # radial position on xy plane = torch.sqrt(x[:,0]**2 + x[:,1]**2), 1D tensor, numel = x.size[0], Note: x[:,0:2] exclude x[:,2]
         alpha = torch.zeros_like(r)  # 1D tensor, numel = x.size[0]
-        alpha[r < self.params["R_physical"]] = self.params[
-            "alpha_internal"
-        ]  # Inside the cylinder
+        # Inside the cylinder
+        alpha[r < self.params["R_physical"]] = self.params["alpha_internal"]  # type: ignore
         return alpha
 
     # =================================Analytic: Homogeneous ball================================================
     @torch.inference_mode()
-    def _alpha_homo_ball(self, x: torch.Tensor):
+    def _alpha_homo_ball(self, x: Tensor):
         """Constant absorption coefficient in a ball centered at origin. Radius determined by the class initialization variable R."""
         r = torch.linalg.norm(
             x, dim=1
         )  # radial position in xyz = torch.sqrt(x[:,0]**2 + x[:,1]**2 + x[:,2]**2), 1D tensor, numel = x.size[0]
         alpha = torch.zeros_like(r)  # 1D tensor, numel = x.size[0]
-        alpha[r < self.params["R_physical"]] = self.params[
-            "alpha_internal"
-        ]  # Inside the cylinder
+        # Inside the cylinder
+        alpha[r < self.params["R_physical"]] = self.params["alpha_internal"]  # type: ignore
         return alpha
 
     # =================================Utilities==========================================================================

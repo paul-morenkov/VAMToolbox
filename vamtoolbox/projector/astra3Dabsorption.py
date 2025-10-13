@@ -1,5 +1,5 @@
 try:
-    import astra
+    import astra  # type: ignore
 except:
     ImportError("Astra toolbox is either not installed or installed incorrectly.")
 import numpy as np

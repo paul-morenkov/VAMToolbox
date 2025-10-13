@@ -1,13 +1,28 @@
+from typing import Protocol
+
 import numpy as np
 
 from vamtoolbox import geometry
+
+
+class CALopticalparams:
+    def __init__(self, *args, **kwargs):
+        raise NotImplementedError
+
+
+class Projector(Protocol):
+    """Protocol for projector classes returned by `projectorconstructor`."""
+
+    def forward(self, x: np.ndarray) -> np.ndarray: ...
+
+    def backward(self, b: np.ndarray) -> np.ndarray: ...
 
 
 def projectorconstructor(
     target_geo: geometry.TargetGeometry,
     proj_geo: geometry.ProjectionGeometry,
     optical_params=None,
-):
+) -> Projector:
     """
     Constructor to create the projector based on the target size and projector type selected
 
@@ -31,6 +46,7 @@ def projectorconstructor(
     """
 
     # check arguments
+    # FIXME: What is this weirdness
     assert isinstance(
         target_geo, geometry.TargetGeometry
     ), "target_geo should be of type: geometry.TargetGeometry"
@@ -51,6 +67,7 @@ def projectorconstructor(
             proj_geo.attenuation_field = np.where(target_geo.insert == 1, np.inf, 0)
 
     # if GPU projection
+    A: Projector
     if proj_geo.CUDA is True:
         if proj_geo.ray_type == "algebraic":
             from vamtoolbox.projector.pyTorchAlgebraicPropagation import (

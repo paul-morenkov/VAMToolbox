@@ -3,9 +3,8 @@ import os
 import numpy as np
 import pyglet
 import pyvista
-import tqdm
+import tqdm  # type: ignore
 import trimesh
-from numpy.typing import NDArray
 from OpenGL.arrays import vbo
 from OpenGL.GL import *
 from OpenGL.GL import shaders
@@ -128,10 +127,10 @@ class Voxelizer:
         body_name: str,
         layer_thickness: float,
         voxel_value: float,
-        voxel_dtype: str = "uint8",
+        voxel_dtype: np.typing.DTypeLike = "uint8",
         square_xy: bool = True,
         store_voxel_array: bool = False,
-        slice_save_path: str = None,
+        slice_save_path: str | None = None,
     ):
         """
         Parameters
@@ -318,10 +317,10 @@ class OpenGLSlicer:
         mesh: BodyMesh,
         layer_thickness: float,
         square_xy: bool = True,
-        slice_save_path: str = None,
+        slice_save_path: str | None = None,
         value=1.0,
-        dtype: str = "uint8",
-    ) -> NDArray:
+        dtype: np.typing.DTypeLike = "uint8",
+    ):
         """
         Parameters
         ----------
@@ -513,6 +512,7 @@ class OpenGLSlicer:
         model = translationMatrix([0, 0, 0 + translation], GLfloat)
         self.shader.setMat4("model", model)
 
+    # type: ignore
     def _draw(self, translation, body_mesh: BodyMesh):
 
         glEnable(GL_STENCIL_TEST)

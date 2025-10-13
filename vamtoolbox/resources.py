@@ -1,5 +1,5 @@
-from argparse import ArgumentError
 import pathlib
+from argparse import ArgumentError
 
 
 def load(input: str):

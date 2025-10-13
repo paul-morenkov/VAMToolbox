@@ -1,12 +1,14 @@
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 # This software may be used and distributed according to the GNU GPLv3 license.
 
-from scipy import sparse
 import time
+
 import numpy as np
+from scipy import sparse
+from scipy.sparse.linalg import LinearOperator
 
 
-class AlgebraicPropagator(sparse.linalg.LinearOperator):
+class AlgebraicPropagator(LinearOperator):
     """
     CPU implementation of algebraic propagator as a subclass of scipy sparse linear operator
     This operator is the A in Ax = b, or the P in Pf = g, where x or f is the real space object (flattened into 1D array) and b or g is the sinogram (flattened into 1D array).
@@ -67,7 +69,7 @@ class AlgebraicPropagator(sparse.linalg.LinearOperator):
         self.n_row_eff = self.internal_matrix_shape[0] * self.z_tiling
 
         # Define the effective linear operator shape
-        super().__init__(
+        super().__init__(  # type: ignore
             shape=(self.n_row_eff, self.n_col_eff), dtype=self.propagation_matrix.dtype
         )  # Supply the properties of the sparse matrix to superclass for output size checking.
 

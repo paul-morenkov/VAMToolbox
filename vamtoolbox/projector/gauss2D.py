@@ -1,23 +1,24 @@
+from time import perf_counter
+
 import cupy as cp
 import cupyx.scipy.ndimage
+import display_functions as disp
+import matplotlib.colors
+import matplotlib.pyplot as plt
+import mkl_fft
 
 # cp.cuda.set_allocator(None)
 # cp.cuda.set_pinned_memory_allocator(None)
 import numpy as np
+import pyfftw  # type: ignore
 import scipy.ndimage
-import pyfftw
+from mkl_fft import _numpy_fft
 
 # try:
 #     import cupy.fft as fft_method
 # except:
 #     import mkl_fft as fft_method
 
-from mkl_fft import _numpy_fft
-import mkl_fft
-import matplotlib.pyplot as plt
-import matplotlib.colors
-import display_functions as disp
-from time import perf_counter
 
 """
 GPU accelerated fft2

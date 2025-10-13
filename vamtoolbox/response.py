@@ -1,11 +1,12 @@
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 # This software may be used and distributed according to the GNU GPLv3 license.
 
-from cmath import isnan
-import numpy as np
-import matplotlib.pyplot as plt
 import time
 import warnings
+from cmath import isnan
+
+import matplotlib.pyplot as plt
+import numpy as np
 
 
 class ResponseModel:
@@ -63,23 +64,19 @@ class ResponseModel:
                 self.map = self._map_glf
                 self.dmapdf = self._dmapdf_glf
                 self.map_inv = self._map_inv_glf
-                self.params = (
-                    self._default_gen_log_fun.copy()
-                )  # Shallow copy avoid editing dict '_default_gen_log_fun' in place
-                self.params.update(
-                    kwargs
-                )  # up-to-date parameters. Default dict is not updated
+                # Shallow copy avoid editing dict '_default_gen_log_fun' in place
+                self.params = self._default_gen_log_fun.copy()
+                # up-to-date parameters. Default dict is not updated
+                self.params.update(kwargs)
 
             elif self.form == "linear":
                 self.map = self._map_lin
                 self.dmapdf = self._dmapdf_lin
                 self.map_inv = self._map_inv_lin
-                self.params = (
-                    self._default_linear.copy()
-                )  # Shallow copy avoid editing dict '_default_linear' in place
-                self.params.update(
-                    kwargs
-                )  # up-to-date parameters. Default dict is not updated
+                # Shallow copy avoid editing dict '_default_linear' in place
+                self.params = self._default_linear.copy()  # type: ignore
+                # up-to-date parameters. Default dict is not updated
+                self.params.update(kwargs)
 
             elif self.form == "identity":
                 self.map = self._map_id
@@ -98,13 +95,11 @@ class ResponseModel:
 
             # function alias
             self.map = self._map_interp
-            self.dmapdf = self._dmapdf_interp
-            self.map_inv = (
-                self._map_inv_interp
-            )  # Inverse mapping uses the same set of data generated for forward mapping.
-            self.params = (
-                self._default_interpolation.copy()
-            )  # Shallow copy avoid editing dict '_default_interpolation' in place
+            self.dmapdf = self._dmapdf_interp  # type: ignore
+            # Inverse mapping uses the same set of data generated for forward mapping.
+            self.map_inv = self._map_inv_interp
+            # Shallow copy avoid editing dict '_default_interpolation' in place
+            self.params = self._default_interpolation.copy()  # type: ignore
 
             # build or import interpolant dataset
             if self.form == "gen_log_fun":
@@ -114,7 +109,7 @@ class ResponseModel:
                 )  # up-to-date parameters. Default dict is not updated
 
                 # build interpolant arrays
-                self.interp_f_0 = np.linspace(
+                self.interp_f_0 = np.linspace(  # type: ignore
                     self.params["interp_min"],
                     self.params["interp_max"],
                     self.params["n_pts"],
@@ -129,7 +124,7 @@ class ResponseModel:
                 )  # up-to-date parameters. Default dict is not updated
 
                 # build interpolant arrays
-                self.interp_f_0 = np.linspace(
+                self.interp_f_0 = np.linspace(  # type: ignore
                     self.params["interp_min"],
                     self.params["interp_max"],
                     self.params["n_pts"],
@@ -143,7 +138,7 @@ class ResponseModel:
                 )  # up-to-date parameters. Default dict is not updated
 
                 # build interpolant arrays
-                self.interp_f_0 = np.linspace(
+                self.interp_f_0 = np.linspace(  # type: ignore
                     self.params["interp_min"],
                     self.params["interp_max"],
                     self.params["n_pts"],
@@ -193,7 +188,7 @@ class ResponseModel:
     # =================================Analytic: Generalized logistic function================================================
 
     # Definition of generalized logistic function: https://en.wikipedia.org/wiki/Generalised_logistic_function
-    def _map_glf(self, f: np.ndarray):
+    def _map_glf(self, f: np.ndarray) -> np.ndarray:
         numerator = self.params["K"] - self.params["A"]
 
         self.cached_exp = np.exp(
@@ -206,7 +201,7 @@ class ResponseModel:
         )  # cache result for later use
         return self.cached_map
 
-    def _dmapdf_glf(self, f: np.ndarray, use_cached_result: bool = False):
+    def _dmapdf_glf(self, f: np.ndarray, use_cached_result: bool = False) -> np.ndarray:
         # This function allows pre-computed results to be used to avoid duplicated computations
         # If 'map' is already executed for the exact current input f, use of cached results avoid recomputing the forward map in derivative evaluation.
 
@@ -222,7 +217,7 @@ class ResponseModel:
         self.cached_dmapdf = coef_1 * coef_2 * coef_3 * exponential
         return self.cached_dmapdf
 
-    def _map_inv_glf(self, mapped: np.ndarray):
+    def _map_inv_glf(self, mapped: np.ndarray) -> np.ndarray:
 
         numerator = -np.log(
             ((self.params["K"] - self.params["A"]) / (mapped - self.params["A"]))
@@ -235,30 +230,30 @@ class ResponseModel:
 
     # =================================Analytic: Linear (affine) function=====================================================
     # Definition of linear function: mapped = M*f + C
-    def _map_lin(self, f: np.ndarray):
+    def _map_lin(self, f: np.ndarray) -> np.ndarray:
         self.cached_map = self.params["M"] * f + self.params["C"]
         return self.cached_map
 
-    def _dmapdf_lin(self, f: np.ndarray, use_cached_result: bool = False):
+    def _dmapdf_lin(self, f: np.ndarray, use_cached_result: bool = False) -> np.ndarray:
         return np.ones_like(f) * self.params["M"]
 
-    def _map_inv_lin(self, mapped: np.ndarray):
+    def _map_inv_lin(self, mapped: np.ndarray) -> np.ndarray:
         return (mapped - self.params["C"]) / self.params["M"]
 
     # =================================Analytic: Identity function============================================================
     # Definition of identity: mapped = f
-    def _map_id(self, f: np.ndarray):
+    def _map_id(self, f: np.ndarray) -> np.ndarray:
         self.cached_map = f
         return self.cached_map
 
-    def _dmapdf_id(self, f: np.ndarray, use_cached_result: bool = False):
+    def _dmapdf_id(self, f: np.ndarray, use_cached_result: bool = False) -> np.ndarray:
         return np.ones_like(f)
 
-    def _map_inv_id(self, mapped: np.ndarray):
+    def _map_inv_id(self, mapped: np.ndarray) -> np.ndarray:
         return mapped
 
     # =================================Interpolation==========================================================================
-    def _map_interp(self, f: np.ndarray):
+    def _map_interp(self, f: np.ndarray) -> np.ndarray:
         """
         Map optical dose to response via interpolation.
         More robust for asymptote values and potentially faster than computing exponentials in generalized logistic function.
@@ -271,7 +266,7 @@ class ResponseModel:
             right=self.interp_map_0[-1],
         )  # Extrapolation points are taken as nearest neighbor, same as default
 
-    def _dmapdf_interp(self, f: np.ndarray):
+    def _dmapdf_interp(self, f: np.ndarray) -> np.ndarray:
         """
         Map optical dose to response 1st derivative via interpolation.
         """
@@ -283,7 +278,7 @@ class ResponseModel:
             right=self.interp_dmapdf_0[-1],
         )  # Extrapolation points are taken as nearest neighbor, same as default
 
-    def _map_inv_interp(self, mapped: np.ndarray):
+    def _map_inv_interp(self, mapped: np.ndarray) -> np.ndarray:
         """
         Map material response back to optical dose via interpolation.
         """
@@ -382,9 +377,7 @@ class ResponseModel:
                 validity = False
 
         # Check lower limit of response function (for all functional forms), up to 1% tolerance
-        if (f_T_min < self.map(0)) and ~(
-            np.isclose(f_T_min, self.map(0), atol=0.01 * f_T_max)
-        ):
+        if (f_T_min < self.map(0)) and ~(np.isclose(f_T_min, self.map(0), atol=0.01 * f_T_max)):  # type: ignore
             warnings.warn(
                 "Minimum response target is lower than response at zero optical dose."
             )
