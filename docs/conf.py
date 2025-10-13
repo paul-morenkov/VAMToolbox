@@ -14,7 +14,7 @@
 import os
 import sys
 import codecs
-import mock
+from unittest import mock
 
 MOCK_MODULES = [
     "numpy",

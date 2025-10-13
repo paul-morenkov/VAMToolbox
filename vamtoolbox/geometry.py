@@ -1,13 +1,10 @@
 import functools
-from logging import warning
 import dill
 import numpy as np
 import matplotlib.pyplot as plt
 from PIL import Image, ImageOps
 from scipy import interpolate
-from scipy import sparse
 import vamtoolbox
-import torch
 
 
 def defaultKwargs(**default_kwargs):
