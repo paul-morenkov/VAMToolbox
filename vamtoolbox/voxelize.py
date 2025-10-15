@@ -15,7 +15,7 @@ import vamtoolbox.geometry
 EPSILON = 0.0001
 
 
-def orthoMatrix(left, right, bottom, top, zNear, zFar, dtype) -> NDArray:
+def orthoMatrix(left, right, bottom, top, zNear, zFar, dtype) -> np.ndarray:
     """
     Return the following matrix
     |       2                               -(right+left)   |
@@ -43,7 +43,7 @@ def orthoMatrix(left, right, bottom, top, zNear, zFar, dtype) -> NDArray:
     return M.T
 
 
-def translationMatrix(direction: NDArray, dtype) -> NDArray:
+def translationMatrix(direction: np.ndarray, dtype) -> np.ndarray:
     """Return matrix to translate by direction vector.
 
     If direction is [x, y, z], return the following matrix
@@ -766,7 +766,7 @@ def rotate(mesh, rot_angles: list[float]):
     return mesh
 
 
-def pad_target_to_square(input_voxel_array: NDArray, xy_side_length: int | None = None):
+def pad_target_to_square(input_voxel_array: np.ndarray, xy_side_length: int | None = None):
     """
     Places input array inside a square array (nx,ny,nz) where nx = ny
 
@@ -821,7 +821,7 @@ def pad_target_to_square(input_voxel_array: NDArray, xy_side_length: int | None 
     return square_pad_voxels
 
 
-def rotate_mesh(mesh, rot_angles: NDArray):
+def rotate_mesh(mesh, rot_angles: np.ndarray):
     """
     Rotates mesh before voxelization
 
