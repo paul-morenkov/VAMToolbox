@@ -15,7 +15,7 @@ import vamtoolbox.geometry
 EPSILON = 0.0001
 
 
-def orthoMatrix(left, right, bottom, top, zNear, zFar, dtype):
+def orthoMatrix(left, right, bottom, top, zNear, zFar, dtype) -> np.ndarray:
     """
     Return the following matrix
     |       2                               -(right+left)   |
@@ -43,7 +43,7 @@ def orthoMatrix(left, right, bottom, top, zNear, zFar, dtype):
     return M.T
 
 
-def translationMatrix(direction, dtype):
+def translationMatrix(direction: np.ndarray, dtype) -> np.ndarray:
     """Return matrix to translate by direction vector.
 
     If direction is [x, y, z], return the following matrix
@@ -101,7 +101,7 @@ class Voxelizer:
         self.voxel_arrays = {}
         self.global_bounds = Bounds()
 
-    def addMeshes(self, stl_struct: dict):
+    def addMeshes(self, stl_struct: dict[str, str]):
         """
         Add mesh files to be voxelized. After adding meshes, the global bounding box of all meshes is calculated and used for subsequent voxelization such that all voxel arrays have the same physical bounds.
 
@@ -496,7 +496,7 @@ class OpenGLSlicer:
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE)
         glBindTexture(GL_TEXTURE_2D, 0)
 
-    def _setModelLocation(self, translation):
+    def _setModelLocation(self, translation: float):
         proj = orthoMatrix(
             self.slicer_bounds.xmin,
             self.slicer_bounds.xmax,
@@ -601,7 +601,7 @@ class OpenGLSlicer:
 
 
 def voxelizeTarget(
-    input_path, resolution, bodies="all", rot_angles=[0, 0, 0]
+    input_path, resolution: int, bodies="all", rot_angles=[0, 0, 0]
 ):  # when an input argument is set to a value in the fuction definition this is its default value
     """
     Takes a mesh of surface points from the input .stl file, voxelizes the mesh,
@@ -738,7 +738,7 @@ def voxelizeTarget(
     return array_voxels, insert_voxels, zero_dose_voxels
 
 
-def rotate(mesh, rot_angles):
+def rotate(mesh, rot_angles: list[float]):
     """
     Rotates mesh before voxelization
 
@@ -766,7 +766,7 @@ def rotate(mesh, rot_angles):
     return mesh
 
 
-def pad_target_to_square(input_voxel_array, xy_side_length=None):
+def pad_target_to_square(input_voxel_array: np.ndarray, xy_side_length: int | None = None):
     """
     Places input array inside a square array (nx,ny,nz) where nx = ny
 
@@ -821,7 +821,7 @@ def pad_target_to_square(input_voxel_array, xy_side_length=None):
     return square_pad_voxels
 
 
-def rotate_mesh(mesh, rot_angles):
+def rotate_mesh(mesh, rot_angles: np.ndarray):
     """
     Rotates mesh before voxelization
 
