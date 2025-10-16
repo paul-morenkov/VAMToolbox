@@ -18,12 +18,11 @@ class Projector2DParallelAstra:
 
         self.angles_rad = np.deg2rad(proj_geo.angles)
 
-        if astra_available is True:
-            self.proj_geom = astra.create_proj_geom(
-                "parallel", 1.0, self.nT, self.angles_rad
-            )
-            self.vol_geom = astra.create_vol_geom(target_geo.nY, target_geo.nX)
-            self.proj_id = astra.create_projector("line", self.proj_geom, self.vol_geom)
+        self.proj_geom = astra.create_proj_geom(
+            "parallel", 1.0, self.nT, self.angles_rad
+        )
+        self.vol_geom = astra.create_vol_geom(target_geo.nY, target_geo.nX)
+        self.proj_id = astra.create_projector("line", self.proj_geom, self.vol_geom)
 
     def forward(self, target):
         """Foward projector operation (b = Ax)"""
