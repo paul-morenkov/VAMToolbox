@@ -1,12 +1,13 @@
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 # This software may be used and distributed according to the GNU GPLv3 license.
 
+import logging
+import os
 import time
+
+import scipy.sparse
 import torch
 import torch.sparse
-import scipy.sparse
-import os
-import logging
 
 
 class PyTorchAlgebraicPropagator:
@@ -54,7 +55,7 @@ class PyTorchAlgebraicPropagator:
                 start_time = time.perf_counter()
                 npz_matrix = scipy.sparse.load_npz(file_path)
                 self.logger.info(
-                    f"Loading finished in {time.perf_counter()-start_time}"
+                    f"Loading finished in {time.perf_counter() - start_time}"
                 )
             except OSError:
                 raise Exception(
@@ -87,7 +88,7 @@ class PyTorchAlgebraicPropagator:
             )  # Converting to csr_matrix format
             del npz_matrix, values, row_indices, col_indices, indices
             self.logger.debug(
-                f"Conversion finished in {time.perf_counter()-start_time}"
+                f"Conversion finished in {time.perf_counter() - start_time}"
             )
 
         elif file_extension == ".pt":
@@ -98,15 +99,13 @@ class PyTorchAlgebraicPropagator:
                     file_path, map_location=self.device
                 ).to(self.dtype)
                 self.logger.info(
-                    f"Loading finished in {time.perf_counter()-start_time}"
+                    f"Loading finished in {time.perf_counter() - start_time}"
                 )
             except OSError:
                 raise Exception(
                     f'PyTorch tensor file at "{file_path}" does not exist or cannot be read.'
                 )
-            self.propagation_matrix = (
-                self.propagation_matrix.to_sparse_csr()
-            )  # Converting to new coo_matrix format if it is either in other sparse formats
+            self.propagation_matrix = self.propagation_matrix.to_sparse_csr()  # Converting to new coo_matrix format if it is either in other sparse formats
 
         else:
             raise Exception(
@@ -117,7 +116,8 @@ class PyTorchAlgebraicPropagator:
         self.propagation_matrix_H = torch.transpose(
             self.propagation_matrix, 0, 1
         )  # does not create a new tensor but only a new view (effectively CSC)
-        if performance_mode := False:  # Determine the format
+        # FIXME: Where is performance mode coming from?
+        if _performance_mode := False:  # Determine the format
             self.propagation_matrix_H = (
                 self.propagation_matrix_H.to_sparse_csr()
             )  # Create another copy in CSR format for maximum performance
@@ -132,7 +132,7 @@ class PyTorchAlgebraicPropagator:
         self.n_col_eff = target_geo.array.size  # Number of voxel in target_geo
         if (self.n_col_eff % self.n_col_internal) != 0:
             raise Exception(
-                f"The imported sparse matrix has {self.n_col_internal} columns, and it cannot match or be tiled to match the total number of voxels ({n_col_eff}) in the real space target."
+                f"The imported sparse matrix has {self.n_col_internal} columns, and it cannot match or be tiled to match the total number of voxels ({self.n_col_eff}) in the real space target."
             )
 
         self.z_tiling = target_geo.array.size // self.n_col_internal
@@ -144,7 +144,7 @@ class PyTorchAlgebraicPropagator:
 
     @torch.inference_mode()
     def forward(self, x):
-        if ~isinstance(
+        if not isinstance(
             x, torch.Tensor
         ):  # Convert the input to a torch tensor if it is not
             x = torch.as_tensor(x, device=self.device, dtype=self.dtype)
@@ -163,7 +163,7 @@ class PyTorchAlgebraicPropagator:
 
     @torch.inference_mode()
     def backward(self, b):
-        if ~isinstance(
+        if not isinstance(
             b, torch.Tensor
         ):  # Convert the input to a torch tensor if it is not
             b = torch.as_tensor(b, device=self.device, dtype=self.dtype)
@@ -208,4 +208,5 @@ class PyTorchAlgebraicPropagator:
     #     else:
     #         raise Exception('Specificed method is not supported.')
 
+    #     return b
     #     return b
