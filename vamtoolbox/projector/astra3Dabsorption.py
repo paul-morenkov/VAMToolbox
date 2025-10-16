@@ -1,7 +1,4 @@
-try:
-    import astra  # type: ignore
-except:
-    ImportError("Astra toolbox is either not installed or installed incorrectly.")
+import astra  # type: ignore
 import numpy as np
 from scipy import interpolate
 

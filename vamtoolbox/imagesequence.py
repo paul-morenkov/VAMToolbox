@@ -257,7 +257,7 @@ class ImageSeq:
         image_time = angle_increment_per_image / rot_vel
         fps = 1 / image_time
 
-        codec = cv2.VideoWriter_fourcc(*"avc1")  # type: ignore
+        codec = cv2.VideoWriter.fourcc(*"avc1")  # type: ignore
         video_out = cv2.VideoWriter(
             save_path,
             codec,

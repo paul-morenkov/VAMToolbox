@@ -1,7 +1,4 @@
-try:
-    import astra
-except:
-    ImportError("Astra toolbox is either not installed or installed incorrectly.")
+import astra
 
 try:
     import tigre
@@ -9,6 +6,7 @@ except:
     ImportError("Tigre toolbox is either not installed or installed incorrectly.")
 
 import numpy as np
+
 import vamtoolbox
 
 
