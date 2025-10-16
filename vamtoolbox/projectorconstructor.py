@@ -53,8 +53,11 @@ def projectorconstructor(
     assert isinstance(
         proj_geo, geometry.ProjectionGeometry
     ), "proj_geo should be of type: geometry.ProjectionGeometry"
-    if optical_params is not None:
-        isinstance(optical_params, CALopticalparams)
+    
+    
+    if isinstance(optical_params, CALopticalparams):
+        # TODO: utilize optical_params in projector construction
+        pass
 
     if target_geo.insert is not None:
         if proj_geo.attenuation_field is not None:

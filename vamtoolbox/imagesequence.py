@@ -3,7 +3,6 @@ from ctypes import ArgumentError
 
 import cv2
 import dill  # type: ignore
-import matplotlib.pyplot as plt
 import numpy as np
 from PIL import Image
 from scipy import ndimage
@@ -68,9 +67,7 @@ class ImageConfig:
         self.invert_v = False if "invert_v" not in kwargs else kwargs["invert_v"]
 
         self.array_num = 1 if "array_num" not in kwargs else kwargs["array_num"]
-        self.array_offset = (
-            0 if "array_offset" not in kwargs else kwargs["array_offset"]
-        )
+        self.array_offset = 0 if "array_offset" not in kwargs else kwargs["array_offset"]
 
         self.normalization_percentile = (
             None
@@ -114,10 +111,10 @@ class ImageSeq:
 
         mod_sinogram = np.copy(sinogram)
 
-        if self.image_config.invert_u == True:
+        if self.image_config.invert_u:
             mod_sinogram = _invertU(mod_sinogram)
 
-        if self.image_config.invert_v == True:
+        if self.image_config.invert_v:
             mod_sinogram = _invertV(mod_sinogram)
 
         if self.image_config.rotate_angle != 0.0:
@@ -128,7 +125,7 @@ class ImageSeq:
 
         max_output_value = 2**self.image_config.bit_depth - 1
 
-        if self.image_config.normalization_percentile != None:
+        if self.image_config.normalization_percentile is not None:
             normalization_value = np.percentile(
                 mod_sinogram, self.image_config.normalization_percentile
             )
@@ -142,22 +139,21 @@ class ImageSeq:
         dtype: np.typing.DTypeLike
         if self.image_config.bit_depth <= 8:
             dtype = np.uint8
-        elif self.image_config.bit_depth > 8 and self.image_config.bit_depth <= 16:
+        elif self.image_config.bit_depth <= 16:
             dtype = np.uint16
-        elif self.image_config.bit_depth > 16 and self.image_config.bit_depth <= 32:
+        elif self.image_config.bit_depth <= 32:
             dtype = np.uint32
         else:
-            raise Exception("Bit depth higher than 32-bit is not supported.")
+            raise ValueError("Bit depth higher than 32-bit is not supported.")
 
-        mod_sinogram = _truncateIntensity(mod_sinogram, max_output_value).astype(
-            dtype
-        )  # The truncation is trivial if normalization_percentile is specified.
+        # The truncation is trivial if normalization_percentile is specified.
+        mod_sinogram = _truncateIntensity(mod_sinogram, max_output_value).astype(dtype)
 
         images = list()
         N_angles = mod_sinogram.shape[1]
 
         for j in range(N_angles):
-
+            # FIXME: is np.uint8 truncating here?
             image_out = np.zeros(
                 (self.image_config.N_v, self.image_config.N_u), dtype=np.uint8
             )
@@ -238,16 +234,16 @@ class ImageSeq:
             cv2.namedWindow("Preview", cv2.WINDOW_NORMAL)
 
         if mode == "conventional":
-            assert (
-                angle_increment_per_image is None
-            ), "angle_increment_per_image must be None in conventional mode because it is derived from number of images in sinogram"
+            assert angle_increment_per_image is None, (
+                "angle_increment_per_image must be None in conventional mode because it is derived from number of images in sinogram"
+            )
             angle_increment_per_image = 360 / len(self.images)
             num_image_per_rot = 360.0 / angle_increment_per_image
             num_total_images = int(np.round(num_image_per_rot * num_loops))
         elif mode == "prescribed":
-            assert (
-                angle_increment_per_image is not None
-            ), "angle_increment_per_image must be None in conventional mode because it is derived from number of images in sinogram"
+            assert angle_increment_per_image is not None, (
+                "angle_increment_per_image must be None in conventional mode because it is derived from number of images in sinogram"
+            )
             num_total_images = int(len(self.images) * num_loops)
         else:
             raise Exception(
@@ -282,7 +278,6 @@ class ImageSeq:
     def saveAsImages(
         self, save_dir: str, image_prefix: str = "image", image_type: str = ".png"
     ):
-
         for k, image in enumerate(self.images):
             save_path = os.path.join(
                 save_dir, image_prefix + "%s" % str(k).zfill(4) + image_type
@@ -311,18 +306,19 @@ def _insertImage(
     v_offset,
     **kwargs,
 ):
-
     N_u = image_config.N_u
     N_v = image_config.N_v
 
     S_u = image.shape[1]
     S_v = image.shape[0]
 
-    u1, u2 = int(N_u / 2 - image_config.u_offset - S_u / 2), int(
-        N_u / 2 - image_config.u_offset + S_u / 2
+    u1, u2 = (
+        int(N_u / 2 - image_config.u_offset - S_u / 2),
+        int(N_u / 2 - image_config.u_offset + S_u / 2),
     )
-    v1, v2 = int(N_v / 2 - image_config.v_offset - v_offset - S_v / 2), int(
-        N_v / 2 - image_config.v_offset - v_offset + S_v / 2
+    v1, v2 = (
+        int(N_v / 2 - image_config.v_offset - v_offset - S_v / 2),
+        int(N_v / 2 - image_config.v_offset - v_offset + S_v / 2),
     )
 
     if u1 < 0 or u2 > image_config.N_u:
@@ -342,7 +338,6 @@ def _insertImage(
 def _arrayInsertImage(
     image: np.ndarray, image_out: np.ndarray, image_config: ImageConfig
 ):
-
     for k in range(image_config.array_num):
         if image_config.array_num % 2 == 0:
             # if array number is even distribute evenly over image height centered at midheight
@@ -368,7 +363,6 @@ def _arrayInsertImage(
 
 
 def _invertU(sinogram):
-
     mod_sinogram = np.flip(sinogram, axis=0)
     return mod_sinogram
 
@@ -402,8 +396,6 @@ def _truncateIntensity(sinogram, maximum_intensity):
 
 
 def _rotate(sinogram, angle_deg):
-    mod_sinogram = ndimage.rotate(
-        sinogram, angle_deg, axes=(0, 2), reshape=True, order=1
-    )
+    mod_sinogram = ndimage.rotate(sinogram, angle_deg, axes=(0, 2), reshape=True, order=1)
 
     return mod_sinogram
