@@ -25,7 +25,7 @@ def buildMatrix(
     A = vamtoolbox.projectorconstructor.projectorconstructor(target_geo, proj_geo)
 
     # get shape of the target and sinogram
-    target_shape = target_geo.array.shape
+    _target_shape = target_geo.array.shape
     space_domain_array = np.zeros_like(target_geo.array)
     proj_domain_array = A.forward(space_domain_array)
     sino_shape = proj_domain_array.shape
@@ -43,9 +43,7 @@ def buildMatrix(
     )  # propagation (projection) matrix.
     # For building and saving, we use the sparse matrix format (instead of sparse array) for compatibility with GPU multiplication operations.
 
-    print(
-        "Building sparse matrix with f{n_matrix_row} rows and f{n_matrix_col} columns."
-    )
+    print(f"Building sparse matrix with {n_matrix_row} rows and {n_matrix_col} columns.")
 
     # Measure shift-variant impulse response
     # store impulse response as row of sparse propagation (projection) matrix
@@ -72,7 +70,7 @@ def buildMatrix(
     # Saving to file path, if specified
     if save_path is not None:
         start_time = time.perf_counter()
-        print(f"Saving to f{save_path}")
+        print(f"Saving to {save_path}")
         sparse.save_npz(save_path, P)  # type: ignore
         print(f"Saving done in {time.perf_counter() - start_time}s.")
 

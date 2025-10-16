@@ -1,8 +1,8 @@
 from functools import partial
 
 import astra  # type: ignore
-import matplotlib.pyplot as plt
 import numpy as np
+from numpy.typing import NDArray
 from skimage.transform._warps import warp
 
 import vamtoolbox
@@ -10,7 +10,6 @@ import vamtoolbox
 
 class Projector2DParallelAstra:
     def __init__(self, target_geo, proj_geo):
-
         self.target_geo = target_geo
         self.proj_geo = proj_geo
 
@@ -18,9 +17,7 @@ class Projector2DParallelAstra:
 
         self.angles_rad = np.deg2rad(proj_geo.angles)
 
-        self.proj_geom = astra.create_proj_geom(
-            "parallel", 1.0, self.nT, self.angles_rad
-        )
+        self.proj_geom = astra.create_proj_geom("parallel", 1.0, self.nT, self.angles_rad)
         self.vol_geom = astra.create_vol_geom(target_geo.nY, target_geo.nX)
         self.proj_id = astra.create_projector("line", self.proj_geom, self.vol_geom)
 
@@ -70,7 +67,7 @@ class Projector2DParallelPython:
         if self.occlusion is not None:
             self.occ_sinogram = self.generateOccSinogram()
 
-    def generateOccSinogram(self):
+    def generateOccSinogram(self) -> NDArray[np.float64]:
         """
         Create sinogram containing minimum values of 's' within the occlusion map
 
@@ -84,8 +81,8 @@ class Projector2DParallelPython:
         occ_sinogram = np.zeros((self.target_geo.nY, self.angles.shape[0]))
         for i, angle in enumerate(np.deg2rad(self.angles)):
             cos_a, sin_a = np.cos(angle), np.sin(angle)
-
-            R = np.array(
+            # FIXME: Why is this necessary if it's never used?
+            _R = np.array(
                 [
                     [cos_a, sin_a, -self.center * (cos_a + sin_a - 1)],
                     [-sin_a, cos_a, -self.center * (cos_a - sin_a - 1)],
@@ -145,7 +142,7 @@ class Projector2DParallelPython:
 
         return occ_sinogram
 
-    def forward(self, target):
+    def forward(self, target: NDArray) -> NDArray[np.float64]:
         """
         Computes forward Radon transform of the target space object accounting for
         reduced projection contribution due to occlusion shadowing
@@ -165,7 +162,6 @@ class Projector2DParallelPython:
         b = np.zeros((self.target_geo.nY, self.angles.shape[0]))
 
         for i, angle in enumerate(np.deg2rad(self.angles)):
-
             cos_a, sin_a = np.cos(angle), np.sin(angle)
 
             R = np.array(
@@ -211,7 +207,6 @@ class Projector2DParallelPython:
             b[self.proj_geo.zero_dose_sino] = 0.0
 
         for i, (curr_proj, angle) in enumerate(zip(b.T, np.deg2rad(self.angles))):
-
             cos_a, sin_a = np.cos(angle), np.sin(angle)
 
             t = self.x * cos_a - self.y * sin_a
@@ -238,7 +233,6 @@ class Projector2DParallelPython:
         return x
 
     def getOccShadow(self, i, angle, t, s):
-
         curr_occ = self.occ_sinogram[:, i]
         interpolant = partial(
             np.interp, xp=self.proj_t, fp=curr_occ, left=np.nan, right=np.nan
@@ -260,7 +254,6 @@ class Projector2DParallelPython:
         for i, (curr_proj, angle) in enumerate(
             zip(projection.T, np.deg2rad(self.angles))
         ):
-
             cos_a, sin_a = np.cos(angle), np.sin(angle)
 
             t = self.x * cos_a - self.y * sin_a

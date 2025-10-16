@@ -1,15 +1,9 @@
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 # This software may be used and distributed according to the GNU GPLv3 license.
 
-import time
-
 import matplotlib
-import matplotlib.animation as anim
 import matplotlib.pyplot as plt
 import numpy as np
-import vedo  # type: ignore
-from matplotlib import axes, cm, colors
-from scipy.ndimage import rotate
 
 import vamtoolbox
 
@@ -68,13 +62,12 @@ class IndexTracker:
         fig=None,
         **kwargs,
     ):
-
         if isinstance(array, np.ndarray):
             self.array = array.astype(np.float32)
-            v_min, v_max = np.min(array), np.max(array)
+            _v_min, v_max = np.min(array), np.max(array)
         elif isinstance(array, vamtoolbox.geometry.TargetGeometry):
             self.array = array.array.astype(np.float32)
-            v_min, v_max = np.min(array.array), np.max(array.array)
+            _v_min, v_max = np.min(array.array), np.max(array.array)
 
         self.vol_type = vol_type
         self.slice_index = slice_index
@@ -117,7 +110,6 @@ class IndexTracker:
         fig.canvas.mpl_connect("scroll_event", self.onscroll)
 
     def onscroll(self, event):
-
         # print("%s %s" % (event.button, event.step))
         if event.inaxes in [self.ax]:
             if self.slice_index == 0:
@@ -165,13 +157,12 @@ class BodiesIndexTracker:
         fig=None,
         **kwargs,
     ):
-
         if isinstance(array, np.ndarray):
             self.array = array.astype(np.float32)
-            v_min, v_max = np.min(array), np.max(array)
+            _v_min, v_max = np.min(array), np.max(array)
         elif isinstance(array, vamtoolbox.geometry.TargetGeometry):
             self.array = array.array.astype(np.float32)
-            v_min, v_max = np.min(array.array), np.max(array.array)
+            _v_min, v_max = np.min(array.array), np.max(array.array)
 
         self.array = np.stack(
             (self.array, self.array, self.array, np.ones_like(self.array)), axis=-1
@@ -226,7 +217,6 @@ class BodiesIndexTracker:
         fig.canvas.mpl_connect("scroll_event", self.onscroll)
 
     def onscroll(self, event):
-
         # print("%s %s" % (event.button, event.step))
         if event.inaxes in [self.ax]:
             if self.slice_index == 0:
@@ -297,11 +287,11 @@ class VolumeSlicer:
         if self.vol_type == "recon" or self.vol_type == "target":
             labels = [["Y", "X"], ["Y", "Z"]]
         elif self.vol_type == "sino":
-            labels = [[r"$\mathrm{\theta}$", "R"], ["R", "Z"]]
+            labels = [[R"$\mathrm{\theta}$", "R"], ["R", "Z"]]
 
         self.scroll_trackers = list()
         for ax, slice_ind, label in zip(self.axs, self.slice_inds, labels):
-            if show_bodies == True:
+            if show_bodies:
                 self.scroll_trackers.append(
                     BodiesIndexTracker(
                         self.array,
@@ -332,7 +322,6 @@ class VolumeSlicer:
 
 
 def showVolumeSlicer(array, vol_type, slice_step=1, **kwargs):
-
     x = VolumeSlicer(array, vol_type, slice_step=slice_step, **kwargs)
     plt.show()
     return x
@@ -369,7 +358,7 @@ class SlicePlot:
             self.array = array.array.astype(np.float32)
             # v_min, v_max = np.min(array.array), np.max(array.array)
 
-        if show_bodies == True:
+        if show_bodies:
             self.array = np.stack(
                 (self.array, self.array, self.array, np.ones_like(self.array)), axis=-1
             )
@@ -386,7 +375,7 @@ class SlicePlot:
             # self.im = self.ax.imshow(self.array,**kwargs)
 
         else:
-            if show_bodies == True:
+            if show_bodies:
                 self.im = self.ax.imshow(
                     self.array[:, :, int(array.shape[-1] / 2), :],
                     vmin=vmin,
@@ -407,7 +396,7 @@ class SlicePlot:
         elif vol_type == "sino":
             xlabel = r"$\mathrm{\theta}$"
             ylabel = "R"
-        if show_bodies == True:
+        if show_bodies:
             self.ax.format_coord = CursorFormatter(self.im)
         self.ax.set_xlabel(xlabel)
         self.ax.set_ylabel(ylabel)
@@ -435,7 +424,6 @@ class ErrorPlot:
         self.fig = fig
         colors = ["red", "blue", "lime", "darkviolet", "cyan", "olive"]
         for ii, error in enumerate(args):
-
             n_iter = np.size(error)
 
             (self.line,) = self.ax.plot(range(n_iter), error)
@@ -618,7 +606,6 @@ class HistogramPlot:
         plt.tight_layout()
 
     def update(self, x):
-
         self.ax.clear()
         if self.target_binary:
             void_dose = x[self.target.void_inds]
@@ -677,7 +664,7 @@ class HistogramPlot:
                 kwargs from matplotlib.pyplot.savefig
         """
         dpi = 300 if "dpi" not in kwargs else kwargs["dpi"]
-        plt.savefig(savepath, **kwargs)
+        plt.savefig(savepath, dpi=dpi, **kwargs)
 
 
 def showHistogramPlot(*args, **kwargs):
@@ -1010,7 +997,6 @@ class EvolvingPlotDemo:
 
 
 def errorTolerancePlot(x, target_geo, dh, tol, savepath=None):
-
     void = np.zeros_like(target_geo.array)
     void[target_geo.void_inds] = 1
     gel = np.zeros_like(target_geo.array)
@@ -1047,5 +1033,5 @@ def errorTolerancePlot(x, target_geo, dh, tol, savepath=None):
 def saveFigure(savepath):
     try:
         plt.savefig(savepath, dpi=500)
-    except:
-        print("Could not save figure!")
+    except Exception as e:
+        print(f"Could not save figure!\n{e}")
