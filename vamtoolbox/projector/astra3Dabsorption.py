@@ -1,10 +1,11 @@
 import astra  # type: ignore
 import numpy as np
+from numpy.typing import NDArray
 from scipy import interpolate
 
 
 class astra3Dabsorption:
-    def __init__(self, target, params):
+    def __init__(self, target: NDArray, params):
         self.pT = target.shape[0]
         self.nX, self.nY, self.nZ = target.shape
         self.angles_rad = np.deg2rad(params["angles"])
@@ -46,13 +47,11 @@ class astra3Dabsorption:
             self.vol_geom = astra.create_vol_geom(self.nY, self.nX)
             self.proj_id = astra.create_projector("line", self.proj_geo, self.vol_geom)
 
-    def forwardProject(self, target):
+    def forwardProject(self, target: NDArray) -> NDArray:
         if self.cuda_available:
             target = np.transpose(target)
 
-            _, projections = astra.create_sino3d_gpu(
-                target, self.proj_geo, self.vol_geom
-            )
+            _, projections = astra.create_sino3d_gpu(target, self.proj_geo, self.vol_geom)
             projections = np.transpose(projections, (2, 1, 0))
 
         else:
@@ -62,7 +61,7 @@ class astra3Dabsorption:
 
         return projections
 
-    def backProject(self, projections):
+    def backProject(self, projections: NDArray) -> NDArray:
         if self.cuda_available:
             projections = np.transpose(projections, (2, 1, 0))
             reconstruction = np.zeros((self.nY, self.nX, self.nZ))
@@ -127,7 +126,7 @@ class astra3Dabsorption:
 
         return self.truncateCircle(reconstruction)
 
-    def getExpabs(self, angle_rad):
+    def getExpabs(self, angle_rad: float) -> float:
         t = self.y_mm * np.cos(-angle_rad) - self.x_mm * np.sin(-angle_rad)
         t_perp = self.y_mm * np.sin(-angle_rad) + self.x_mm * np.cos(-angle_rad)
 
@@ -145,13 +144,10 @@ class astra3Dabsorption:
 
         return relative_intensity
 
-    def truncateCircle(self, target):
-
+    def truncateCircle(self, target: NDArray) -> NDArray:
         container_circle = (self.x_mm**2 + self.y_mm**2) > (self.container_radius) ** 2
 
-        out_reconstruction_circle = (self.x**2 + self.y**2) > (
-            target.shape[0] // 2
-        ) ** 2
+        out_reconstruction_circle = (self.x**2 + self.y**2) > (target.shape[0] // 2) ** 2
         target[np.logical_and(out_reconstruction_circle, container_circle), :] = 0.0
 
         return target

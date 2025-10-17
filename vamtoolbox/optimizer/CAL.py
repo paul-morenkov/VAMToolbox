@@ -60,9 +60,9 @@ def minimizeCAL(target_geo, proj_geo, options):
         #     sum_target_voxels = np.sum(target_geo.array) - np.sum(attenuation)
         # else:
         #     sum_target_voxels = np.sum(target_geo.array)
-        sum_target_voxels = np.sum(target_geo.array)
+        _sum_target_voxels = np.sum(target_geo.array)
 
-        voxel_num_diff = np.zeros(len(test_thresholds))
+        _voxel_num_diff = np.zeros(len(test_thresholds))
 
         score = np.zeros(len(test_thresholds))
         for i in range(0, len(test_thresholds)):
@@ -137,7 +137,7 @@ def minimizeCAL(target_geo, proj_geo, options):
 
     iter_times[0] = time.perf_counter() - t0
 
-    prev_proj_error = np.zeros(b.shape)
+    _prev_proj_error = np.zeros(b.shape)
 
     # if attenuation is not None:
     #     opt_target = target_geo.array - attenuation
@@ -186,9 +186,7 @@ def minimizeCAL(target_geo, proj_geo, options):
         iter_times[curr_iter] = time.perf_counter() - t0
 
         if options.verbose == "time" or options.verbose == "plot":
-            print(
-                "Iteration %4.0f at time: %6.1f s" % (curr_iter, iter_times[curr_iter])
-            )
+            print("Iteration %4.0f at time: %6.1f s" % (curr_iter, iter_times[curr_iter]))
         if options.verbose == "plot":
             dp.update(_error, x)
 

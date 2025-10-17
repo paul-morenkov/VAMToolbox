@@ -1,10 +1,10 @@
 import astra
 import numpy as np
-from skimage.util import dtype
+from numpy.typing import NDArray
 
 
 class astra3Dinclined:
-    def __init__(self, target, params):
+    def __init__(self, target: NDArray, params: dict[str]):
         self.pT = target.shape[0]
         self.nX, self.nY, self.nZ = target.shape
         self.angles_rad = np.deg2rad(params["angles"])
@@ -21,7 +21,7 @@ class astra3Dinclined:
         # :param V: Vector array.
         # :type V: numpy.ndarray
         # :returns: A parallel projection geometry.
-
+        # FIXME: Does this actually require CUDA?
         assert self.cuda_available
 
         # We generate the same geometry as the circular one above.
@@ -56,7 +56,7 @@ class astra3Dinclined:
             "parallel3d_vec", self.nZ, self.pT, self.angles_vector
         )
 
-    def forwardProject(self, target):
+    def forwardProject(self, target: NDArray) -> NDArray:
         assert self.cuda_available
 
         target = np.transpose(target)
@@ -66,7 +66,7 @@ class astra3Dinclined:
 
         return projections
 
-    def backProject(self, projections):
+    def backProject(self, projections: NDArray) -> NDArray:
         assert self.cuda_available
 
         projections = np.transpose(projections, (2, 1, 0))

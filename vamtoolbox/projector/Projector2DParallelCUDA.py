@@ -1,10 +1,4 @@
 import astra  # type: ignore
-
-try:
-    import tigre  # type: ignore
-except:
-    ImportError("Tigre toolbox is either not installed or installed incorrectly.")
-
 import numpy as np
 
 import vamtoolbox
@@ -19,9 +13,7 @@ class Projector2DParallelCUDAAstra:
 
         self.angles_rad = np.deg2rad(proj_geo.angles)
 
-        self.proj_geom = astra.create_proj_geom(
-            "parallel", 1.0, self.nT, self.angles_rad
-        )
+        self.proj_geom = astra.create_proj_geom("parallel", 1.0, self.nT, self.angles_rad)
         self.vol_geom = astra.create_vol_geom(target_geo.nY, target_geo.nX)
         self.proj_id = astra.create_projector("line", self.proj_geom, self.vol_geom)
 

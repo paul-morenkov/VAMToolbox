@@ -1,12 +1,14 @@
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 # This software may be used and distributed according to the GNU GPLv3 license.
 
-import torch
-import numpy as np
-import matplotlib.pyplot as plt
 import logging
 import time
+
+import matplotlib.pyplot as plt
+import numpy as np
 import scipy.sparse
+import torch
+
 from vamtoolbox.util.data import filterSinogram  # only required for inverse_backward
 
 
@@ -51,9 +53,7 @@ class PyTorchRayTracingPropagator:
             self.device = torch.device("cuda")
         else:
             self.device = torch.device("cpu")
-        self.logger.info(
-            f"Ray tracing computation is performed on: {repr(self.device)}"
-        )
+        self.logger.info(f"Ray tracing computation is performed on: {repr(self.device)}")
 
         if isinstance(
             self.proj_geo.ray_trace_ray_config, RayState
@@ -101,7 +101,7 @@ class PyTorchRayTracingPropagator:
         )
 
         # Convert output to nparray if needed
-        if self.output_torch_tensor == True:
+        if self.output_torch_tensor:
             return self.ray_state.integral
         else:
             return self.ray_state.integral.cpu().numpy()
@@ -109,9 +109,7 @@ class PyTorchRayTracingPropagator:
     @torch.inference_mode()
     def backward(self, ray_energy_0):
         # Check if input is tensor
-        if ~isinstance(
-            ray_energy_0, torch.Tensor
-        ):  # attempt to convert input to tensor
+        if ~isinstance(ray_energy_0, torch.Tensor):  # attempt to convert input to tensor
             ray_energy_0 = torch.as_tensor(
                 ray_energy_0, device=self.device, dtype=self.ray_state.tensor_dtype
             )
@@ -128,7 +126,7 @@ class PyTorchRayTracingPropagator:
         )
 
         # Convert output to nparray if needed
-        if self.output_torch_tensor == True:
+        if self.output_torch_tensor:
             return deposition_grid
         else:
             # maintain backward compatibility with optimizers written in numpy, which assumes 2D real space quantities to have no third dimension
@@ -162,7 +160,7 @@ class PyTorchRayTracingPropagator:
         ).ravel()  # pyTorchRayTracingPropagator always return 1D vector
         g0 *= np.pi / (2 * self.proj_geo.n_angles)
 
-        if self.output_torch_tensor == True:
+        if self.output_torch_tensor:
             return torch.as_tensor(g0, device=self.device)
         else:
             return g0
@@ -185,7 +183,7 @@ class PyTorchRayTracingPropagator:
         propagation_matrix_coo.coalesce()
 
         # Output as a torch sparse tensor
-        if self.output_torch_tensor == True:
+        if self.output_torch_tensor:
             return propagation_matrix_coo
         else:  # Convert output to class scipy.sparse.coo_array if needed
             indices = propagation_matrix_coo.indices().cpu().numpy()
@@ -303,10 +301,13 @@ class RayTraceSolver:
     ):
         # Initialize ray tracker, where consecutive ray positions are recorded. Default to track every 5 rays
         if tracker_on:
-            ray_tracker = torch.nan * torch.zeros(
-                (((ray_state.num_rays - 1) // track_every) + 1, 3, self.max_num_step),
-                device=self.device,
-                dtype=ray_state.x_0.dtype,
+            ray_tracker = (
+                torch.nan
+                * torch.zeros(
+                    (((ray_state.num_rays - 1) // track_every) + 1, 3, self.max_num_step),
+                    device=self.device,
+                    dtype=ray_state.x_0.dtype,
+                )
             )  # ray_state.x_i[::track_every, :] has number of rows equal (ray_state.num_rays-1)//track_every)+1
             tracker_ind = torch.zeros_like(ray_state.active)
             tracker_ind[::track_every] = True
@@ -321,16 +322,11 @@ class RayTraceSolver:
         ray_state.active = (
             ray_state.active & ~ray_state.exited
         )  # only non exited rays are considered
-        initial_active_ray_count = torch.sum(
-            ray_state.active, dim=0
-        )  # initially active
-        active_ray_count = torch.sum(
-            ray_state.active, dim=0
-        )  # current active ray count
+        initial_active_ray_count = torch.sum(ray_state.active, dim=0)  # initially active
+        active_ray_count = torch.sum(ray_state.active, dim=0)  # current active ray count
         active_ray_exist = active_ray_count > 0
 
         while (self.step_counter < self.max_num_step) and active_ray_exist:
-
             ray_state = self.step(
                 ray_state, step_size
             )  # step forward. Where x_i and v_i will be replaced by x_ip1 and v_ip1 respectively
@@ -363,7 +359,7 @@ class RayTraceSolver:
                 )  # current active ray count
                 active_ray_exist = active_ray_count > 0
                 self.logger.debug(
-                    f"Completed {self.step_counter}th-step at time {time.perf_counter()-start_time}. Ray active/init active/all: {active_ray_count}/{initial_active_ray_count}/{ray_state.num_rays}"
+                    f"Completed {self.step_counter}th-step at time {time.perf_counter() - start_time}. Ray active/init active/all: {active_ray_count}/{initial_active_ray_count}/{ray_state.num_rays}"
                 )
 
             self.step_counter += 1
@@ -385,10 +381,13 @@ class RayTraceSolver:
     ):
         # Initialize ray tracker, where consecutive ray positions are recorded. Default to track every 5 rays
         if tracker_on:
-            ray_tracker = torch.nan * torch.zeros(
-                (((ray_state.num_rays - 1) // track_every) + 1, 3, self.max_num_step),
-                device=self.device,
-                dtype=ray_state.x_0.dtype,
+            ray_tracker = (
+                torch.nan
+                * torch.zeros(
+                    (((ray_state.num_rays - 1) // track_every) + 1, 3, self.max_num_step),
+                    device=self.device,
+                    dtype=ray_state.x_0.dtype,
+                )
             )  # ray_state.x_i[::track_every, :] has number of rows equal (ray_state.num_rays-1)//track_every)+1
             tracker_ind = torch.zeros_like(ray_state.active)
             tracker_ind[::track_every] = True
@@ -404,19 +403,14 @@ class RayTraceSolver:
         ray_state.active = (
             ray_state.active & ~ray_state.exited
         )  # only non exited rays are considered
-        initial_active_ray_count = torch.sum(
-            ray_state.active, dim=0
-        )  # initially active
-        active_ray_count = torch.sum(
-            ray_state.active, dim=0
-        )  # current active ray count
+        initial_active_ray_count = torch.sum(ray_state.active, dim=0)  # initially active
+        active_ray_count = torch.sum(ray_state.active, dim=0)  # current active ray count
         active_ray_exist = active_ray_count > 0
         desposition_grid = torch.zeros_like(
             self.index_model.xg
         )  # This grid is where the energy accumulates
 
         while (self.step_counter < self.max_num_step) and active_ray_exist:
-
             ray_state = self.step(
                 ray_state, step_size
             )  # step forward. Where x_i and v_i will be replaced by x_ip1 and v_ip1 respectively
@@ -450,7 +444,7 @@ class RayTraceSolver:
                 )  # current active ray count
                 active_ray_exist = active_ray_count > 0
                 self.logger.debug(
-                    f"Completed {self.step_counter}th-step at time {time.perf_counter()-start_time}. Ray active/init active/all: {active_ray_count}/{initial_active_ray_count}/{ray_state.num_rays}"
+                    f"Completed {self.step_counter}th-step at time {time.perf_counter() - start_time}. Ray active/init active/all: {active_ray_count}/{initial_active_ray_count}/{ray_state.num_rays}"
                 )
 
             self.step_counter += 1
@@ -486,10 +480,13 @@ class RayTraceSolver:
     ):
         # Initialize ray tracker, where consecutive ray positions are recorded. Default to track every 5 rays
         if tracker_on:
-            ray_tracker = torch.nan * torch.zeros(
-                (((ray_state.num_rays - 1) // track_every) + 1, 3, self.max_num_step),
-                device=self.device,
-                dtype=ray_state.x_0.dtype,
+            ray_tracker = (
+                torch.nan
+                * torch.zeros(
+                    (((ray_state.num_rays - 1) // track_every) + 1, 3, self.max_num_step),
+                    device=self.device,
+                    dtype=ray_state.x_0.dtype,
+                )
             )  # ray_state.x_i[::track_every, :] has number of rows equal (ray_state.num_rays-1)//track_every)+1
             tracker_ind = torch.zeros_like(ray_state.active)
             tracker_ind[::track_every] = True
@@ -505,12 +502,8 @@ class RayTraceSolver:
         ray_state.active = (
             ray_state.active & ~ray_state.exited
         )  # only non exited rays are considered
-        initial_active_ray_count = torch.sum(
-            ray_state.active, dim=0
-        )  # initially active
-        active_ray_count = torch.sum(
-            ray_state.active, dim=0
-        )  # current active ray count
+        initial_active_ray_count = torch.sum(ray_state.active, dim=0)  # initially active
+        active_ray_count = torch.sum(ray_state.active, dim=0)  # current active ray count
         active_ray_exist = active_ray_count > 0
         ray_state.integral = torch.zeros_like(
             ray_state.integral
@@ -526,7 +519,6 @@ class RayTraceSolver:
         )  # Multiply with the alpha values exactly at the grid points.
 
         while (self.step_counter < self.max_num_step) and active_ray_exist:
-
             ray_state = self.step(
                 ray_state, step_size
             )  # step forward. Where x_i and v_i will be replaced by x_ip1 and v_ip1 respectively
@@ -562,7 +554,7 @@ class RayTraceSolver:
                 )  # current active ray count
                 active_ray_exist = active_ray_count > 0
                 self.logger.debug(
-                    f"Completed {self.step_counter}th-step at time {time.perf_counter()-start_time}. Ray active/init active/all: {active_ray_count}/{initial_active_ray_count}/{ray_state.num_rays}"
+                    f"Completed {self.step_counter}th-step at time {time.perf_counter() - start_time}. Ray active/init active/all: {active_ray_count}/{initial_active_ray_count}/{ray_state.num_rays}"
                 )
 
             self.step_counter += 1
@@ -585,10 +577,13 @@ class RayTraceSolver:
         """This function record the energy deposited to voxels by rays of unity energy. The result is recorded as a pyTorch sparse COO tensor."""
         # Initialize ray tracker, where consecutive ray positions are recorded. Default to track every 5 rays
         if tracker_on:
-            ray_tracker = torch.nan * torch.zeros(
-                (((ray_state.num_rays - 1) // track_every) + 1, 3, self.max_num_step),
-                device=self.device,
-                dtype=ray_state.x_0.dtype,
+            ray_tracker = (
+                torch.nan
+                * torch.zeros(
+                    (((ray_state.num_rays - 1) // track_every) + 1, 3, self.max_num_step),
+                    device=self.device,
+                    dtype=ray_state.x_0.dtype,
+                )
             )  # ray_state.x_i[::track_every, :] has number of rows equal (ray_state.num_rays-1)//track_every)+1
             tracker_ind = torch.zeros_like(ray_state.active)
             tracker_ind[::track_every] = True
@@ -607,18 +602,12 @@ class RayTraceSolver:
         ray_state.active = (
             ray_state.active & ~ray_state.exited
         )  # only non exited rays are considered
-        initial_active_ray_count = torch.sum(
-            ray_state.active, dim=0
-        )  # initially active
-        active_ray_count = torch.sum(
-            ray_state.active, dim=0
-        )  # current active ray count
+        initial_active_ray_count = torch.sum(ray_state.active, dim=0)  # initially active
+        active_ray_count = torch.sum(ray_state.active, dim=0)  # current active ray count
         active_ray_exist = active_ray_count > 0
 
         # Get the sparse tensor size
-        n_rows = (
-            ray_state.num_rays
-        )  # currently use number of rays as the number of sinogram elements. Supersampling (where num_rays > number of sinogram elements) is to be supported in the future.
+        n_rows = ray_state.num_rays  # currently use number of rays as the number of sinogram elements. Supersampling (where num_rays > number of sinogram elements) is to be supported in the future.
         n_cols = self.index_model.xg.numel()  # number of voxel elements
         propagation_matrix_shape = (n_rows, n_cols)
         propagation_matrix = torch.sparse_coo_tensor(
@@ -626,7 +615,6 @@ class RayTraceSolver:
         )  # initialize empty propagation matrix
 
         while (self.step_counter < self.max_num_step) and active_ray_exist:
-
             ray_state = self.step(
                 ray_state, step_size
             )  # step forward. Where x_i and v_i will be replaced by x_ip1 and v_ip1 respectively
@@ -666,7 +654,7 @@ class RayTraceSolver:
                 )  # current active ray count
                 active_ray_exist = active_ray_count > 0
                 self.logger.debug(
-                    f"Completed {self.step_counter}th-step at time {time.perf_counter()-start_time}. Ray active/init active/all: {active_ray_count}/{initial_active_ray_count}/{ray_state.num_rays}"
+                    f"Completed {self.step_counter}th-step at time {time.perf_counter() - start_time}. Ray active/init active/all: {active_ray_count}/{initial_active_ray_count}/{ray_state.num_rays}"
                 )
 
             self.step_counter += 1
@@ -748,9 +736,7 @@ class RayTraceSolver:
 
     # =======================ODE solvers======================
     @torch.inference_mode()
-    def _forwardSymplecticEuler(
-        self, ray_state, step_size
-    ):  # step forward the RayState
+    def _forwardSymplecticEuler(self, ray_state, step_size):  # step forward the RayState
         # push np1 to be n
         ray_state.x_i[ray_state.active] = ray_state.x_ip1[ray_state.active]
         ray_state.v_i[ray_state.active] = ray_state.v_ip1[ray_state.active]
@@ -775,9 +761,9 @@ class RayTraceSolver:
         ray_state.x_ip1[ray_state.active] = ray_state.x_i[ray_state.active] + dx_active
 
         ds_active = torch.linalg.norm(dx_active, dim=1)  # physical distance travelled
-        ray_state.s[
-            ray_state.active
-        ] += ds_active  # update total physical distance travelled
+        ray_state.s[ray_state.active] += (
+            ds_active  # update total physical distance travelled
+        )
         ray_state.attenuance[ray_state.active] += (
             self.attenuation_model.alpha(ray_state.x_i[ray_state.active]) * ds_active
         )  # attenuance is integrated along the path. Explicit integral of attenuance avoid errors from repeated multiplication.
@@ -814,9 +800,9 @@ class RayTraceSolver:
         ray_state.x_ip1[ray_state.active] = ray_state.x_i[ray_state.active] + dx_active
 
         ds_active = torch.linalg.norm(dx_active, dim=1)  # physical distance travelled
-        ray_state.s[
-            ray_state.active
-        ] += ds_active  # update total physical distance travelled
+        ray_state.s[ray_state.active] += (
+            ds_active  # update total physical distance travelled
+        )
         ray_state.attenuance[ray_state.active] += (
             self.attenuation_model.alpha(ray_state.x_i[ray_state.active]) * ds_active
         )  # attenuance is integrated along the path. Explicit integral of attenuance avoid errors from repeated multiplication.
@@ -899,16 +885,14 @@ class RayTraceSolver:
 
         for adjacent_voxel_number in range(adj_voxel_count):
             # For performance, the accumulation happens in the innermost layer, only to relevant elements.
-            ray_state.integral[ray_state.active] = (
-                self.integrateEnergyFromAdjacentVoxel(
-                    ray_state.ray_energy[ray_state.active],
-                    step_size_idx_unit,
-                    x_arr_idx,
-                    voxel_idx_x,
-                    adjacent_voxel_number,
-                    real_space_distribution,
-                    ray_state.integral[ray_state.active],
-                )
+            ray_state.integral[ray_state.active] = self.integrateEnergyFromAdjacentVoxel(
+                ray_state.ray_energy[ray_state.active],
+                step_size_idx_unit,
+                x_arr_idx,
+                voxel_idx_x,
+                adjacent_voxel_number,
+                real_space_distribution,
+                ray_state.integral[ray_state.active],
             )
             # All arguments of integrateEnergyFromAdjacentVoxel are now downselected by ray_state.active. It will not act on inactive set of rays.
         return ray_state
@@ -973,12 +957,12 @@ class RayTraceSolver:
         """
 
         # Check if the number of active rays matches
-        assert (
-            x_arr_idx.shape[0] == ray_energy.shape[0]
-        ), f"First dimension of x_arr_idx ({x_arr_idx.shape[0]}) and ray_energy ({ray_energy.shape[0]}) must match."
-        assert (
-            x_arr_idx.shape[0] == voxel_idx_x.shape[0]
-        ), f"First dimension of x_arr_idx ({x_arr_idx.shape[0]}) and voxel_idx_x ({voxel_idx_x.shape[0]}) must match."
+        assert x_arr_idx.shape[0] == ray_energy.shape[0], (
+            f"First dimension of x_arr_idx ({x_arr_idx.shape[0]}) and ray_energy ({ray_energy.shape[0]}) must match."
+        )
+        assert x_arr_idx.shape[0] == voxel_idx_x.shape[0], (
+            f"First dimension of x_arr_idx ({x_arr_idx.shape[0]}) and voxel_idx_x ({voxel_idx_x.shape[0]}) must match."
+        )
 
         # These 3 binary indices index the last dimension of voxel_idx_x which contains the floor and ceiling voxel (idx) adjacent to position x
         above_x = int(adjacent_voxel_number % 2)  # first bit
@@ -1028,7 +1012,7 @@ class RayTraceSolver:
             # Therefore we cannot simply assign/add to the deposition_grid via advance indexing (option 1 below).
             # Option 3 is the fastest and correct method. The experimented methods are displayed here for reference.
 
-            if direct_assignment := False:
+            if _direct_assignment := False:
                 # (1) Direct assignement
                 # This is the operation that would results in racing condition in the assignment process due to duplicates of insertion indices.
                 # Although this advance indexing does not raise exceptions, the numerical results are WRONG.
@@ -1038,7 +1022,7 @@ class RayTraceSolver:
                     voxel_idx_select[valid_idx, 1],
                     voxel_idx_select[valid_idx, 2],
                 ] += energy_interaction_at_valid_idx
-            elif as_linear_operator := False:
+            elif _as_linear_operator := False:
                 # (2) Duplicate-summation done by sparse tensor multiplication. (Each step takes ~10 times long as (1))
                 # In this method, the assignment operation is written as a sparse linear operator.
                 # Summation is done naturally through the matrix vector multiplication process.
@@ -1047,7 +1031,7 @@ class RayTraceSolver:
                     voxel_idx_select[valid_idx, :],
                     energy_interaction_at_valid_idx,
                 )
-            elif as_uncoalesced_sparse_tensor := True:
+            elif _as_uncoalesced_sparse_tensor := True:
                 # (3) Duplicate-summation done by coalescence of sparse tensor. (Each step takes similar time as (1))
                 # In this method, the deposition grid itself is represented by a uncoalesced sparse tensor.
                 # Uncoalesced sparse tensor permits multiple elements to coexist with the same index
@@ -1093,15 +1077,15 @@ class RayTraceSolver:
         """
 
         # Check if the number of active rays matches
-        assert (
-            x_arr_idx.shape[0] == ray_energy.shape[0]
-        ), f"First dimension of x_arr_idx ({x_arr_idx.shape[0]}) and ray_energy ({ray_energy.shape[0]}) must match."
-        assert (
-            x_arr_idx.shape[0] == voxel_idx_x.shape[0]
-        ), f"First dimension of x_arr_idx ({x_arr_idx.shape[0]}) and voxel_idx_x ({voxel_idx_x.shape[0]}) must match."
-        assert (
-            x_arr_idx.shape[0] == ray_integral.shape[0]
-        ), f"First dimension of x_arr_idx ({x_arr_idx.shape[0]}) and ray_integral ({ray_integral.shape[0]}) must match."
+        assert x_arr_idx.shape[0] == ray_energy.shape[0], (
+            f"First dimension of x_arr_idx ({x_arr_idx.shape[0]}) and ray_energy ({ray_energy.shape[0]}) must match."
+        )
+        assert x_arr_idx.shape[0] == voxel_idx_x.shape[0], (
+            f"First dimension of x_arr_idx ({x_arr_idx.shape[0]}) and voxel_idx_x ({voxel_idx_x.shape[0]}) must match."
+        )
+        assert x_arr_idx.shape[0] == ray_integral.shape[0], (
+            f"First dimension of x_arr_idx ({x_arr_idx.shape[0]}) and ray_integral ({ray_integral.shape[0]}) must match."
+        )
 
         # These 3 binary indices index the last dimension of voxel_idx_x which contains the floor and ceiling voxel (idx) adjacent to position x
         above_x = int(adjacent_voxel_number % 2)  # first bit
@@ -1183,15 +1167,15 @@ class RayTraceSolver:
         """
 
         # Check if the number of active rays matches
-        assert (
-            x_arr_idx.shape[0] == ray_energy.shape[0]
-        ), f"First dimension of x_arr_idx ({x_arr_idx.shape[0]}) and ray_energy ({ray_energy.shape[0]}) must match."
-        assert (
-            x_arr_idx.shape[0] == voxel_idx_x.shape[0]
-        ), f"First dimension of x_arr_idx ({x_arr_idx.shape[0]}) and voxel_idx_x ({voxel_idx_x.shape[0]}) must match."
-        assert (
-            x_arr_idx.shape[0] == active_ray_idx.shape[0]
-        ), f"First dimension of x_arr_idx ({x_arr_idx.shape[0]}) and active_ray_idx ({active_ray_idx.shape[0]}) must match."
+        assert x_arr_idx.shape[0] == ray_energy.shape[0], (
+            f"First dimension of x_arr_idx ({x_arr_idx.shape[0]}) and ray_energy ({ray_energy.shape[0]}) must match."
+        )
+        assert x_arr_idx.shape[0] == voxel_idx_x.shape[0], (
+            f"First dimension of x_arr_idx ({x_arr_idx.shape[0]}) and voxel_idx_x ({voxel_idx_x.shape[0]}) must match."
+        )
+        assert x_arr_idx.shape[0] == active_ray_idx.shape[0], (
+            f"First dimension of x_arr_idx ({x_arr_idx.shape[0]}) and active_ray_idx ({active_ray_idx.shape[0]}) must match."
+        )
 
         # These 3 binary indices index the last dimension of voxel_idx_x which contains the floor and ceiling voxel (idx) adjacent to position x
         above_x = int(adjacent_voxel_number % 2)  # first bit
@@ -1271,8 +1255,8 @@ class RayTraceSolver:
         """
         Express position x in grid indices
         """
-        return (x - (-self.index_model.grid_span / 2)) * (
-            1 / self.index_model.voxel_size
+        return (
+            (x - (-self.index_model.grid_span / 2)) * (1 / self.index_model.voxel_size)
         )  # Normalize position with voxel size so that the position is indicative of the tensor index
 
     @torch.inference_mode()
@@ -1368,15 +1352,15 @@ class RayTraceSolver:
         # When most rays are active most of the time, checking exit for only the active rays turns out to be empricically slower than checking all rays.
         # The logical comparison of the entire array is much faster than indexing the array which may require creating a copy.
         # When the active rays are sparse (e.g. only tracing 1 ray at a time to build algebraic representation of propagator), there might be performance benefit.
-        if only_check_active_rays := False:
-
+        if _only_check_active_rays := False:
             # Check for position if it is outside domain bounds (as defined by center of edge voxels). Check the coordinate PER DIMENSION, <min-tol or >max+tol
             # Distance tolerance is one voxel away from the bound (so the rest of the edge voxels are included, plus another half voxel in extra)
             exited_in_positive_direction = (
-                ray_state.x_ip1[ray_state.active, :]
-                > self.index_model.xv_yv_zv_max + self.index_model.voxel_size
-            ) & (
-                ray_state.v_ip1[ray_state.active, :] > 0.0
+                (
+                    ray_state.x_ip1[ray_state.active, :]
+                    > self.index_model.xv_yv_zv_max + self.index_model.voxel_size
+                )
+                & (ray_state.v_ip1[ray_state.active, :] > 0.0)
             )  # In case of 2D problems, voxel size along z is inf so the ray is always within the z-bounds
             exited_in_negative_direction = (
                 ray_state.x_ip1[ray_state.active, :]
@@ -1402,14 +1386,14 @@ class RayTraceSolver:
             )
 
         else:
-
             # Check for position if it is outside domain bounds (as defined by center of edge voxels). Check the coordinate PER DIMENSION, <min-tol or >max+tol
             # Distance tolerance is one voxel away from the bound (so the rest of the edge voxels are included, plus another half voxel in extra)
             exited_in_positive_direction = (
-                ray_state.x_ip1
-                > self.index_model.xv_yv_zv_max + self.index_model.voxel_size
-            ) & (
-                ray_state.v_ip1 > 0.0
+                (
+                    ray_state.x_ip1
+                    > self.index_model.xv_yv_zv_max + self.index_model.voxel_size
+                )
+                & (ray_state.v_ip1 > 0.0)
             )  # In case of 2D problems, voxel size along z is inf so the ray is always within the z-bounds
             exited_in_negative_direction = (
                 ray_state.x_ip1
@@ -1433,9 +1417,7 @@ class RayTraceSolver:
             # exited_in_positive_direction = torch.sum(exited_in_positive_direction, dim = 1, keepdim = False).bool()
             # exited_in_negative_direction = torch.sum(exited_in_negative_direction, dim = 1, keepdim = False).bool()
 
-            ray_state.exited = (
-                exited_in_positive_direction | exited_in_negative_direction
-            )
+            ray_state.exited = exited_in_positive_direction | exited_in_negative_direction
 
         # Optionally check if intensity close to zero (e.g. due to occulsion)
 
@@ -1591,11 +1573,11 @@ class RayState:
         # Correction: Maybe it is still like case 1, considering a axially long part, positive elevation and the bottom parts could be misesed.
         proj_plane_radial_offset = np.sqrt(sino_n0_max**2 + sino_n2_max**2)
 
-        # (3, largest) The whole bounding box is patternable. Note: The existing vamtoolbox always cut to cylinder and discard the corner of the box.
+        # (3, largest) The whole bounding box is patternable. NOTE: The existing vamtoolbox always cut to cylinder and discard the corner of the box.
         # When patternable volume is circumscribes the bounding box (the corners of the box is patternable/relevant), the radial distance between ray init position and the grid center is the diagonal of the 3D box.
         # proj_plane_radial_offset = np.sqrt(np.amax(target_coord_vec_list[0])**2 + np.amax(target_coord_vec_list[1])**2 + np.amax(target_coord_vec_list[2])**2)
 
-        if CPU_create := False:
+        if _CPU_create := False:
             # Create with CPU (which usually has access to more memory)
             G0, G1, G2 = np.meshgrid(sino_n0, sino_n1_rad, sino_n2, indexing="ij")
             G0 = G0.ravel()
@@ -1605,18 +1587,12 @@ class RayState:
             self.x_0 = np.ndarray((G0.size, 3))
             # Center of projection plane relative to grid center. Refers to documentations for derivation.
             self.x_0[:, 0] = (
-                proj_plane_radial_offset
-                * np.cos(G1)
-                * np.cos(self.inclination_angle_rad)
+                proj_plane_radial_offset * np.cos(G1) * np.cos(self.inclination_angle_rad)
             )
             self.x_0[:, 1] = (
-                proj_plane_radial_offset
-                * np.sin(G1)
-                * np.cos(self.inclination_angle_rad)
+                proj_plane_radial_offset * np.sin(G1) * np.cos(self.inclination_angle_rad)
             )
-            self.x_0[:, 2] = proj_plane_radial_offset * np.sin(
-                self.inclination_angle_rad
-            )
+            self.x_0[:, 2] = proj_plane_radial_offset * np.sin(self.inclination_angle_rad)
 
             # Adding vectors from center of projection plane to pixel. Refers to documentations for derivation.
             self.x_0[:, 0] += -G0 * np.sin(G1) - G2 * np.cos(G1) * np.sin(
@@ -1691,15 +1667,9 @@ class RayState:
 
     def resetRaysIterateToInitial(self):
         # Setting current ray state back to original.
-        self.x_i = (
-            self.x_0.detach().clone()
-        )  # .detach() removes computation path, detach tensor from autograd graph. .clone() creates a copy.
-        self.x_ip1 = (
-            self.x_0.detach().clone()
-        )  # This is the proper way to copy tensor without sharing storage: https://stackoverflow.com/questions/55266154/pytorch-preferred-way-to-copy-a-tensor/62496418
-        self.v_i = (
-            self.v_0.detach().clone()
-        )  # Without .detach().clone(), subsequent in-place updates to x_i and x_ip1 would also update x_0. Similarly, v_i, v_ip1 would affect v_0.
+        self.x_i = self.x_0.detach().clone()  # .detach() removes computation path, detach tensor from autograd graph. .clone() creates a copy.
+        self.x_ip1 = self.x_0.detach().clone()  # This is the proper way to copy tensor without sharing storage: https://stackoverflow.com/questions/55266154/pytorch-preferred-way-to-copy-a-tensor/62496418
+        self.v_i = self.v_0.detach().clone()  # Without .detach().clone(), subsequent in-place updates to x_i and x_ip1 would also update x_0. Similarly, v_i, v_ip1 would affect v_0.
         self.v_ip1 = self.v_0.detach().clone()
 
         # Initialize other properties of the rays
@@ -1741,7 +1711,6 @@ class RayState:
 
     @torch.inference_mode()
     def plot_ray_init_position(self, angles_deg, color="black"):
-
         angles_rad = angles_deg * np.pi / 180.0
 
         # Find the closest match

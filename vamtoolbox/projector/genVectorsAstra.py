@@ -2,7 +2,6 @@ import numpy as np
 
 
 def genVectorsAstra(angles, incline_angle, cone_angle=0, distance_origin_source=0):
-
     vectors = np.zeros((np.size(angles), 12))
     angles = np.deg2rad(angles)
     incline_angle = np.deg2rad(incline_angle)
@@ -30,7 +29,6 @@ def genVectorsAstra(angles, incline_angle, cone_angle=0, distance_origin_source=
             vectors[i, 11] = np.cos(incline_angle)
 
     else:
-
         for i, angle in np.ndenumerate(angles):
             # source
             vectors[i, 0] = np.sin(angle) * distance_origin_source
